@@ -21,4 +21,30 @@ public class Playlist {
             inverseJoinColumns = @JoinColumn(name = "track_id")
     )
     private Set<Track> tracks;
+
+    public Playlist(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    public Playlist() {
+
+    }
+
+    public static Playlist create(String name, String description) {
+        return new Playlist(name, description);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
 }
