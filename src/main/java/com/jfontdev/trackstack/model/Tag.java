@@ -16,4 +16,24 @@ public class Tag {
 
     @ManyToMany(mappedBy = "tags")
     private Set<Track> tracks;
+
+    public Tag(String name) {
+        this.name = name;
+    }
+
+    public Tag() {
+
+    }
+
+    public static Tag create(String name) {
+        return new Tag(name);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
 }

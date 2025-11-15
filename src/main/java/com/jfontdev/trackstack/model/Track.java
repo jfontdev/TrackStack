@@ -21,7 +21,7 @@ public class Track {
 
     @ManyToMany
     @JoinTable(
-            name="track_tags",
+            name = "track_tags",
             joinColumns = @JoinColumn(name = "track_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
@@ -29,4 +29,48 @@ public class Track {
 
     @ManyToMany(mappedBy = "tracks")
     private Set<Playlist> playlists;
+
+    public Track(String title, String artist, Double bpm, String key, String duration) {
+        this.title = title;
+        this.artist = artist;
+        this.bpm = bpm;
+        this.key = key;
+        this.duration = duration;
+    }
+
+    public Track() {
+
+    }
+
+    public static Track create(String title, String artist, Double bpm, String key, String duration) {
+        return new Track(title, artist, bpm, key, duration);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getArtist() {
+        return artist;
+    }
+
+    public String getAlbum() {
+        return album;
+    }
+
+    public Double getBpm() {
+        return bpm;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public String getDuration() {
+        return duration;
+    }
 }
