@@ -31,7 +31,7 @@ Prefer early returns for invalid or missing data.
 
 Entities must use static factory methods:
 
-```
+```java
 public static Track create(...) {
     return new Track(...);
 }
