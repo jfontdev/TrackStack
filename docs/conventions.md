@@ -2,7 +2,8 @@
 
 ## Naming
 
-- Services end with `Service` and `ServiceImpl`.
+- Service interfaces must be suffixed `Service` (e.g., `UserService`).
+- Concrete service implementations must be suffixed `ServiceImpl` (e.g., `UserServiceImpl`) and may live under `service/impl`.
 - Controllers end with `Controller`.
 - DTOs use `RequestDTO` and `ResponseDTO`.
 - Repositories extend `JpaRepository`.
