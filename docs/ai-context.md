@@ -26,7 +26,7 @@ This file exists to guide AI code generation tools (Copilot, etc.).
 - Services contain business logic.
 - Optional handled explicitly with guard clauses.
 - Entities use factory methods.
-- No mappers (manual mapping inside services)
+- Avoid dedicated mapper classes; do manual Entity↔DTO mapping in services.
 
 ## Non-Goals
 
