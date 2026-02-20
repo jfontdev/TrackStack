@@ -76,4 +76,4 @@ Controllers must never instantiate entities directly.
 ## Mapping
 
 - Keep entity <-> DTO mapping in the service layer.
-- No mappers (manual mapping inside services)
+- Do not use separate mapper classes or helpers; perform manual mapping inside service methods.
