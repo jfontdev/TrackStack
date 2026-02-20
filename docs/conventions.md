@@ -3,7 +3,8 @@
 ## Naming
 
 - Service interfaces must be suffixed `Service` (e.g., `UserService`).
-- Concrete service implementations must be suffixed `ServiceImpl` (e.g., `UserServiceImpl`) and may live under `service/impl`.
+- Concrete service implementations must be suffixed `ServiceImpl` (e.g., `UserServiceImpl`) and may live under
+  `service/impl`.
 - Controllers end with `Controller`.
 - DTOs use `RequestDTO` and `ResponseDTO`.
 - Repositories extend `JpaRepository`.
@@ -16,10 +17,16 @@ Always handle Optional explicitly with guard clauses:
 
 ```java
 Optional<Entity> entity = repository.findById(id);
-if (entity.isEmpty()) {
-    throw new NotFoundException("Entity not found.");
+if(entity.
+
+isEmpty()){
+        throw new
+
+NotFoundException("Entity not found.");
 }
-return entity.get();
+        return entity.
+
+get();
 ```
 
 Do NOT use chained `.orElseThrow()` for readability reasons.
@@ -69,4 +76,4 @@ Controllers must never instantiate entities directly.
 ## Mapping
 
 - Keep entity <-> DTO mapping in the service layer.
-- Use small private mapper methods for readability.
+- No mappers (manual mapping inside services)
