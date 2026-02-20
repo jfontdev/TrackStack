@@ -14,7 +14,7 @@
 
 Always handle Optional explicitly with guard clauses:
 
-```
+```java
 Optional<Entity> entity = repository.findById(id);
 if (entity.isEmpty()) {
     throw new NotFoundException("Entity not found.");
@@ -32,7 +32,7 @@ Prefer early returns for invalid or missing data.
 
 Entities must use static factory methods:
 
-```
+```java
 public static Track create(...) {
     return new Track(...);
 }
