@@ -103,7 +103,7 @@ Status: ✅ Completed
 
 ---
 
-## 🔜 Phase 4.5 – Redis Caching (Current Phase)
+## ✅ Phase 4.5 – Redis Caching
 
 **Goal:** Upgrade in-memory cache to a distributed cache using Redis.
 
@@ -118,6 +118,8 @@ Deliverables:
 - `docker-compose.yml` with Redis service
 - Updated `CacheConfig.java` using Redis
 - JSON serialized cache entries in Redis
+
+Status: ✅ Completed
 
 ---
 
