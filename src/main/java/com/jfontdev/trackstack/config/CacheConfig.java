@@ -62,8 +62,12 @@ public class CacheConfig {
         // Without this, Redis stores a plain JSON array/object, and when Spring tries
         // to read it back, it doesn't know what Java class to instantiate (especially
         // for Collections like List or generic wrappers).
+        // To avoid insecure deserialization, we explicitly restrict which packages
+        // are allowed for polymorphic deserialization instead of allowing all types.
         PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
-                .allowIfBaseType(Object.class)
+                .allowIfSubType("java.lang.")
+                .allowIfSubType("java.util.")
+                .allowIfSubType("com.jfontdev.trackstack.dto.")
                 .build();
 
         /**
