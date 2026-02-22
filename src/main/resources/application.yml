@@ -9,6 +9,17 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      # Explicit Redis timeout in milliseconds.
+      # Spring Boot's default is 60000 ms (60 seconds), which may be too high for some use cases.
+      # This value is configurable via REDIS_TIMEOUT and should be tuned per-environment.
+      timeout: ${REDIS_TIMEOUT:5000}
+      # Basic Lettuce connection pool configuration.
+      # These defaults are conservative and can be overridden via environment variables as needed.
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:8}
+          max-idle: ${REDIS_POOL_MAX_IDLE:8}
+          min-idle: ${REDIS_POOL_MIN_IDLE:0}
 
 server:
   port: 8080
