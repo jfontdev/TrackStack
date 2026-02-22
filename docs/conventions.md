@@ -73,6 +73,15 @@ Controllers must never instantiate entities directly.
 
 ---
 
+## Documentation
+
+- **Full JavaDoc is mandatory** on all Classes, Methods, Records, and Interfaces.
+- Since this is a learning project, documentation must be highly human-readable.
+- Explain the *why* behind decisions, not just the *what*.
+- Include `@param`, `@return`, and `@throws` tags where applicable.
+
+---
+
 ## Mapping
 
 - Keep entity <-> DTO mapping in the service layer.

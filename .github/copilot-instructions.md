@@ -38,6 +38,11 @@ Canonical guidance lives in:
 - Avoid functional chaining when it hurts readability.
 - No System.out.println; use Logger.
 
+## Documentation
+
+- Full JavaDoc documentation is required on all Classes, Methods, Records, and Interfaces.
+- The main point of this project is for learning, so documentation must be highly human-readable, explaining the "why" and "how" clearly.
+
 ## Testing
 
 - Prefer integration tests with Testcontainers when touching persistence.
