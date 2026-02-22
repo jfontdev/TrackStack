@@ -82,7 +82,7 @@ Status: ✅ Completed
 
 ---
 
-## 🚀 Phase 04 – Caching (Current Phase)
+## ✅ Phase 04 – Caching (Current Phase)
 
 **Goal:** Introduce controlled performance optimization.
 
@@ -98,6 +98,26 @@ Deliverables:
 - Clean caching annotations
 - No caching in controllers or repositories
 - No premature Redis integration
+
+Status: ✅ Completed
+
+---
+
+## 🔜 Phase 4.5 – Redis Caching (Current Phase)
+
+**Goal:** Upgrade in-memory cache to a distributed cache using Redis.
+
+- Add `spring-boot-starter-data-redis` dependency
+- Create `docker-compose.yml` for local Redis instance
+- Configure `RedisCacheManager` with JSON serialization
+- Set default Time-To-Live (TTL) for cache entries
+- Update application properties for Redis connection
+
+Deliverables:
+
+- `docker-compose.yml` with Redis service
+- Updated `CacheConfig.java` using Redis
+- JSON serialized cache entries in Redis
 
 ---
 
@@ -147,8 +167,7 @@ Deliverables:
 
 **Goal:** Prepare for scalability.
 
-- Introduce Caffeine or Redis
-- Add TTL policies
+- Add TTL policies per cache name
 - Cache invalidation strategy review
 - Analyze read-heavy endpoints
 
