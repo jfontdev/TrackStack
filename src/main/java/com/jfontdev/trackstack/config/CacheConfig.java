@@ -70,7 +70,7 @@ public class CacheConfig {
                 .allowIfSubType("com.jfontdev.trackstack.dto.")
                 .build();
 
-        /**
+        /*
          * activateDefaultTyping tells Jackson to embed the class name into the JSON.
          * We use EVERYTHING so that even Collections (like List) and wrapper types
          * (like Long) get their type information saved.
