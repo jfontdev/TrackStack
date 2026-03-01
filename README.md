@@ -17,6 +17,7 @@ practices.
 - Flyway (database migrations)
 - Spring Cache (in-memory for now)
 - Testcontainers (integration testing)
+- Rest Assured (integration testing)
 - Swagger / OpenAPI
 
 ---
@@ -62,6 +63,7 @@ No entity is exposed directly via controllers.
 ## Testing Strategy
 
 - Integration tests use Testcontainers.
+- API tests use Rest Assured.
 - Flyway migrations run during test startup.
 - Full stack is tested: Controller → Service → Repository → DB.
 - No mocking repositories in integration tests.

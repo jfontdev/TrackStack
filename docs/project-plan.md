@@ -82,7 +82,7 @@ Status: ✅ Completed
 
 ---
 
-## ✅ Phase 04 – Caching (Current Phase)
+## ✅ Phase 04 – Caching
 
 **Goal:** Introduce controlled performance optimization.
 
@@ -123,11 +123,12 @@ Status: ✅ Completed
 
 ---
 
-## 🔜 Phase 05 – Integration Testing
+## ✅ Phase 05 – Integration Testing
 
 **Goal:** Test full stack behavior.
 
 - Testcontainers with PostgreSQL
+- Rest Assured for API-level integration tests
 - Flyway migrations executed during tests
 - BaseIntegrationTest class
 - Controller → Service → Repository → DB coverage
@@ -138,6 +139,8 @@ Deliverables:
 - TrackControllerIntegrationTest
 - TagControllerIntegrationTest
 - PlaylistControllerIntegrationTest
+
+Status: ✅ Completed
 
 ---
 
@@ -246,4 +249,4 @@ The project will be considered “enterprise-ready” when:
 
 # 📌 Current Phase
 
-👉 Phase 04 – Caching
+👉 Phase 06 – Update & Delete Operations
