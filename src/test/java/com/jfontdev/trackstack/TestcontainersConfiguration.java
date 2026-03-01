@@ -37,7 +37,7 @@ class TestcontainersConfiguration {
         String password = "trackstack";
 
         // Create and configure the PostgreSQL container with fixed settings
-        PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DockerImageName.parse("postgres:latest"))
+        PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
                 .withDatabaseName(databaseName)
                 .withUsername(username)
                 .withPassword(password)
