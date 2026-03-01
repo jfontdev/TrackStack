@@ -17,6 +17,7 @@ This file exists to guide AI code generation tools (Copilot, etc.).
 - Flyway migrations only
 - In-memory caching (for now)
 - Testcontainers for integration testing
+- Rest Assured for integration testing
 
 ## Architecture Rules
 
