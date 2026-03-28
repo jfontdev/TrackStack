@@ -1,6 +1,8 @@
 package com.jfontdev.trackstack.dto.track;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 
 /**
  * Request DTO for fully updating (PUT) an existing track.
@@ -15,9 +17,9 @@ import jakarta.validation.constraints.NotBlank;
  * @param key      the musical key (optional)
  * @param duration the track duration (required)
  */
-public record TrackUpdateRequestDTO(@NotBlank String title,
-                                    @NotBlank String artist,
-                                    Double bpm,
-                                    String key,
-                                    @NotBlank String duration) {
+public record TrackUpdateRequestDTO(@NotBlank(message = "Title must not be empty") String title,
+        @NotBlank(message = "Artist must not be empty") String artist,
+        @Positive(message = "BPM must be positive if provided") Double bpm,
+        String key,
+        @NotBlank(message = "Duration must not be empty") @Pattern(regexp = "^\\d+:\\d{2}$", message = "Duration must be in mm:ss format") String duration) {
 }
