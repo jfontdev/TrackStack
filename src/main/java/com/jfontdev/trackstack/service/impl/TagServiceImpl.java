@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -111,13 +112,18 @@ public class TagServiceImpl implements TagService {
      * {@inheritDoc}
      * <p>
      * <b>Cache Eviction:</b> Evicts all entries in the "tags" cache because
-     * updating a tag invalidates both the individual entry and the list.
+     * updating a tag invalidates both the individual entry and the list. It also
+     * evicts "tracks" and "playlists" caches because they both include tag names.
      */
     @Override
-    @CacheEvict(value = "tags", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tags", allEntries = true),
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public TagResponseDTO updateTag(Long id, TagUpdateRequestDTO dto) {
-        log.info("Evicting 'tags' cache. Updating tag with id: {}", id);
+        log.info("Evicting 'tags', 'tracks', and 'playlists' caches. Updating tag with id: {}", id);
         Tag tag = findTagOrThrow(id);
 
         tag.update(dto.name());
@@ -132,13 +138,18 @@ public class TagServiceImpl implements TagService {
      * Merges non-null fields from the patch DTO with the existing entity's values,
      * then delegates to the entity's {@code update} method.
      * <p>
-     * <b>Cache Eviction:</b> Evicts all entries in the "tags" cache.
+     * <b>Cache Eviction:</b> Evicts all entries in the "tags" cache. It also
+     * evicts "tracks" and "playlists" caches because they both include tag names.
      */
     @Override
-    @CacheEvict(value = "tags", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tags", allEntries = true),
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public TagResponseDTO patchTag(Long id, TagPatchRequestDTO dto) {
-        log.info("Evicting 'tags' cache. Patching tag with id: {}", id);
+        log.info("Evicting 'tags', 'tracks', and 'playlists' caches. Patching tag with id: {}", id);
         Tag tag = findTagOrThrow(id);
 
         String name = dto.name() != null ? dto.name() : tag.getName();
@@ -153,13 +164,18 @@ public class TagServiceImpl implements TagService {
      * {@inheritDoc}
      * <p>
      * <b>Cache Eviction:</b> Evicts all entries in the "tags" cache because
-     * deleting a tag invalidates the list cache.
+     * deleting a tag invalidates the list cache. It also evicts "tracks"
+     * and "playlists" caches because they both include tag names.
      */
     @Override
-    @CacheEvict(value = "tags", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tags", allEntries = true),
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public void deleteTag(Long id) {
-        log.info("Evicting 'tags' cache. Deleting tag with id: {}", id);
+        log.info("Evicting 'tags', 'tracks', and 'playlists' caches. Deleting tag with id: {}", id);
         Tag tag = findTagOrThrow(id);
 
         tagRepository.delete(tag);

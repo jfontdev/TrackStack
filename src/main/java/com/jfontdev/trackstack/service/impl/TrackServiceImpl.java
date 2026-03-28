@@ -130,13 +130,18 @@ public class TrackServiceImpl implements TrackService {
      * {@inheritDoc}
      * <p>
      * <b>Cache Eviction:</b> Evicts all entries in the "tracks" cache because
-     * updating a track invalidates both the individual entry and the list.
+     * updating a track invalidates both the individual entry and the list. It also
+     * evicts the "playlists" cache because tracked changes affect playlist
+     * responses.
      */
     @Override
-    @CacheEvict(value = "tracks", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public TrackResponseDTO updateTrack(Long id, TrackUpdateRequestDTO dto) {
-        log.info("Evicting 'tracks' cache. Updating track with id: {}", id);
+        log.info("Evicting 'tracks' and 'playlists' caches. Updating track with id: {}", id);
         Track track = findTrackOrThrow(id);
 
         track.update(dto.title(), dto.artist(), dto.bpm(), dto.key(), dto.duration());
@@ -151,13 +156,18 @@ public class TrackServiceImpl implements TrackService {
      * Merges non-null fields from the patch DTO with the existing entity's values,
      * then delegates to the entity's {@code update} method.
      * <p>
-     * <b>Cache Eviction:</b> Evicts all entries in the "tracks" cache.
+     * <b>Cache Eviction:</b> Evicts all entries in the "tracks" cache. It also
+     * evicts the "playlists" cache because tracked changes affect playlist
+     * responses.
      */
     @Override
-    @CacheEvict(value = "tracks", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public TrackResponseDTO patchTrack(Long id, TrackPatchRequestDTO dto) {
-        log.info("Evicting 'tracks' cache. Patching track with id: {}", id);
+        log.info("Evicting 'tracks' and 'playlists' caches. Patching track with id: {}", id);
         Track track = findTrackOrThrow(id);
 
         String title = dto.title() != null ? dto.title() : track.getTitle();
@@ -197,13 +207,18 @@ public class TrackServiceImpl implements TrackService {
      * {@inheritDoc}
      * <p>
      * <b>Cache Eviction:</b> Evicts all entries in the "tracks" cache because
-     * changing a track's tags invalidates cached track representations.
+     * changing a track's tags invalidates cached track representations. It also
+     * evicts the "playlists" cache because playlists include track tags in their
+     * representation.
      */
     @Override
-    @CacheEvict(value = "tracks", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public TrackResponseDTO addTagToTrack(Long trackId, Long tagId) {
-        log.info("Evicting 'tracks' cache. Adding tag {} to track {}", tagId, trackId);
+        log.info("Evicting 'tracks' and 'playlists' caches. Adding tag {} to track {}", tagId, trackId);
         Track track = findTrackOrThrow(trackId);
         Tag tag = findTagOrThrow(tagId);
 
@@ -217,13 +232,18 @@ public class TrackServiceImpl implements TrackService {
      * {@inheritDoc}
      * <p>
      * <b>Cache Eviction:</b> Evicts all entries in the "tracks" cache because
-     * changing a track's tags invalidates cached track representations.
+     * changing a track's tags invalidates cached track representations. It also
+     * evicts the "playlists" cache because playlists include track tags in their
+     * representation.
      */
     @Override
-    @CacheEvict(value = "tracks", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public TrackResponseDTO removeTagFromTrack(Long trackId, Long tagId) {
-        log.info("Evicting 'tracks' cache. Removing tag {} from track {}", tagId, trackId);
+        log.info("Evicting 'tracks' and 'playlists' caches. Removing tag {} from track {}", tagId, trackId);
         Track track = findTrackOrThrow(trackId);
         Tag tag = findTagOrThrow(tagId);
 
