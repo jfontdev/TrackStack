@@ -88,11 +88,11 @@ public class TagController {
      * Only non-null fields in the request body are applied to the existing tag.
      *
      * @param id  the tag's unique identifier
-     * @param dto the request body containing the fields to update
+     * @param dto the validated request body containing the fields to update
      * @return 200 OK with the updated tag, or 404 if not found
      */
     @PatchMapping("/{id}")
-    public TagResponseDTO patch(@PathVariable Long id, @RequestBody TagPatchRequestDTO dto) {
+    public TagResponseDTO patch(@PathVariable Long id, @Valid @RequestBody TagPatchRequestDTO dto) {
         return tagService.patchTag(id, dto);
     }
 
