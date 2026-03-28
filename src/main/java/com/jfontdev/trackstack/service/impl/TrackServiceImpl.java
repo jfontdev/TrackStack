@@ -39,9 +39,11 @@ import java.util.Optional;
  * return stale data.
  * <p>
  * <b>Transaction Strategy:</b>
- * All write operations are annotated with {@code @Transactional} to ensure
- * proper rollback on failure. Read operations rely on JPA's default
- * transactional behavior.
+ * All write operations are annotated with {@code @Transactional} (read-write)
+ * to ensure proper rollback on failure. Read operations such as
+ * {@code getTrackById} and {@code getAllTracks} are explicitly annotated with
+ * {@code @Transactional(readOnly = true)} to clearly mark them as read-only
+ * and to integrate cleanly with Spring's transaction management.
  */
 @Service
 public class TrackServiceImpl implements TrackService {
