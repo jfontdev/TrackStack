@@ -18,6 +18,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -277,7 +278,7 @@ public class TrackServiceImpl implements TrackService {
     private TrackResponseDTO mapToResponseDTO(Track track) {
         List<TagResponseDTO> tagDTOs = track.getTags().stream()
                 .map(tag -> new TagResponseDTO(tag.getId(), tag.getName()))
-                .sorted(java.util.Comparator.comparing(TagResponseDTO::name))
+                .sorted(Comparator.comparing(TagResponseDTO::name))
                 .toList();
 
         return new TrackResponseDTO(
