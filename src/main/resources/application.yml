@@ -21,6 +21,11 @@ spring:
           max-idle: ${REDIS_POOL_MAX_IDLE:8}
           min-idle: ${REDIS_POOL_MIN_IDLE:0}
 
+  jpa:
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+
 server:
   port: 8080
 
