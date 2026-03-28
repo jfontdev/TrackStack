@@ -57,7 +57,8 @@ public class TrackServiceImpl implements TrackService {
      * this service manages the Track-Tag relationship (the owning side).
      *
      * @param trackRepository the repository used for database operations on tracks
-     * @param tagRepository   the repository used to look up tags for relationship management
+     * @param tagRepository   the repository used to look up tags for relationship
+     *                        management
      */
     public TrackServiceImpl(TrackRepository trackRepository, TagRepository tagRepository) {
         this.trackRepository = trackRepository;
@@ -267,6 +268,8 @@ public class TrackServiceImpl implements TrackService {
      * <p>
      * This centralizes the entity-to-DTO mapping logic to avoid repetition
      * across service methods. The mapping includes the track's associated tags.
+     * The tags are sorted by name to guarantee deterministic API responses
+     * despite the underlying set's undefined iteration order.
      *
      * @param track the entity to map
      * @return the corresponding response DTO
@@ -274,6 +277,7 @@ public class TrackServiceImpl implements TrackService {
     private TrackResponseDTO mapToResponseDTO(Track track) {
         List<TagResponseDTO> tagDTOs = track.getTags().stream()
                 .map(tag -> new TagResponseDTO(tag.getId(), tag.getName()))
+                .sorted(java.util.Comparator.comparing(TagResponseDTO::name))
                 .toList();
 
         return new TrackResponseDTO(
