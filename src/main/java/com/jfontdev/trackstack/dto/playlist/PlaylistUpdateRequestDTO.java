@@ -1,6 +1,7 @@
 package com.jfontdev.trackstack.dto.playlist;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * Request DTO for fully updating (PUT) an existing playlist.
@@ -13,7 +14,6 @@ import jakarta.validation.constraints.NotBlank;
  * @param description the new playlist description (optional)
  */
 public record PlaylistUpdateRequestDTO(
-        @NotBlank String name,
-        String description
-) {
+                @NotBlank(message = "Name must not be empty") String name,
+                @Size(max = 500, message = "Description must not exceed 500 characters") String description) {
 }

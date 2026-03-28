@@ -11,6 +11,5 @@ import jakarta.validation.constraints.NotBlank;
  * @param name the new tag name (required, must be unique)
  */
 public record TagUpdateRequestDTO(
-        @NotBlank String name
-) {
+                @NotBlank(message = "Name must not be empty") String name) {
 }
