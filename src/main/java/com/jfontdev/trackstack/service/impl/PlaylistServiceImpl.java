@@ -19,6 +19,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -260,7 +261,9 @@ public class PlaylistServiceImpl implements PlaylistService {
      * <p>
      * This centralizes the entity-to-DTO mapping logic to avoid repetition
      * across service methods. The mapping includes the playlist's associated
-     * tracks, and each track includes its own tags.
+     * tracks, and each track includes its own tags. Tracks are sorted by title
+     * and tags are sorted by name to guarantee deterministic API responses
+     * despite the underlying sets' undefined iteration order.
      *
      * @param playlist the entity to map
      * @return the corresponding response DTO
@@ -270,6 +273,7 @@ public class PlaylistServiceImpl implements PlaylistService {
                 .map(track -> {
                     List<TagResponseDTO> tagDTOs = track.getTags().stream()
                             .map(tag -> new TagResponseDTO(tag.getId(), tag.getName()))
+                            .sorted(Comparator.comparing(TagResponseDTO::name))
                             .toList();
 
                     return new TrackResponseDTO(
@@ -281,6 +285,7 @@ public class PlaylistServiceImpl implements PlaylistService {
                             track.getDuration(),
                             tagDTOs);
                 })
+                .sorted(Comparator.comparing(TrackResponseDTO::title))
                 .toList();
 
         return new PlaylistResponseDTO(
