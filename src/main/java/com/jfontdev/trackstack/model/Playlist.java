@@ -2,6 +2,7 @@ package com.jfontdev.trackstack.model;
 
 import jakarta.persistence.*;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -114,11 +115,14 @@ public class Playlist {
     }
 
     /**
-     * Returns the set of tracks in this playlist.
+     * Returns an unmodifiable view of the tracks in this playlist.
+     * <p>
+     * To modify the tracks, use {@link #addTrack(Track)} or {@link #removeTrack(Track)}
+     * to maintain domain encapsulation.
      *
-     * @return the tracks belonging to this playlist
+     * @return an unmodifiable set of tracks belonging to this playlist
      */
     public Set<Track> getTracks() {
-        return tracks;
+        return Collections.unmodifiableSet(tracks);
     }
 }

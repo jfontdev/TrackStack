@@ -2,6 +2,7 @@ package com.jfontdev.trackstack.model;
 
 import jakarta.persistence.*;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -160,12 +161,14 @@ public class Track {
     }
 
     /**
-     * Returns the set of tags associated with this track.
+     * Returns an unmodifiable view of the tags associated with this track.
+     * <p>
+     * To modify the tags, use {@link #addTag(Tag)} or {@link #removeTag(Tag)}
+     * to maintain domain encapsulation.
      *
-     * @return an unmodifiable view would be ideal, but JPA requires
-     *         a mutable collection for relationship management
+     * @return an unmodifiable set of tags associated with this track
      */
     public Set<Tag> getTags() {
-        return tags;
+        return Collections.unmodifiableSet(tags);
     }
 }
