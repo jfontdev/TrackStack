@@ -88,11 +88,11 @@ public class PlaylistController {
      * Only non-null fields in the request body are applied to the existing playlist.
      *
      * @param id  the playlist's unique identifier
-     * @param dto the request body containing the fields to update
+     * @param dto the validated request body containing the fields to update
      * @return 200 OK with the updated playlist, or 404 if not found
      */
     @PatchMapping("/{id}")
-    public PlaylistResponseDTO patch(@PathVariable Long id, @RequestBody PlaylistPatchRequestDTO dto) {
+    public PlaylistResponseDTO patch(@PathVariable Long id, @Valid @RequestBody PlaylistPatchRequestDTO dto) {
         return playlistService.patchPlaylist(id, dto);
     }
 
