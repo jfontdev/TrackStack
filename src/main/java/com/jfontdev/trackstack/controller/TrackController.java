@@ -92,7 +92,7 @@ public class TrackController {
      * @return 200 OK with the updated track, or 404 if not found
      */
     @PatchMapping("/{id}")
-    public TrackResponseDTO patch(@PathVariable Long id, @RequestBody TrackPatchRequestDTO dto) {
+    public TrackResponseDTO patch(@PathVariable Long id, @Valid @RequestBody TrackPatchRequestDTO dto) {
         return trackService.patchTrack(id, dto);
     }
 
