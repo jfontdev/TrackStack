@@ -234,7 +234,100 @@ public class TrackControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .body("tags", hasSize(0));
     }
+    // ==================== Validation Tests ====================
 
+    @Test
+    void createTrackWithMissingFieldsReturns400() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of())
+                .when()
+                .post("/api/tracks")
+                .then()
+                .statusCode(400)
+                .body("errors.title", equalTo("Title must not be empty"))
+                .body("errors.artist", equalTo("Artist must not be empty"))
+                .body("errors.duration", equalTo("Duration must not be empty"));
+    }
+
+    @Test
+    void createTrackWithInvalidDurationReturns400() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "title", "Track 1",
+                        "artist", "Artist 1",
+                        "duration", "5:5" // Invalid format, expects mm:ss
+                ))
+                .when()
+                .post("/api/tracks")
+                .then()
+                .statusCode(400)
+                .body("errors.duration", equalTo("Duration must be in mm:ss format"));
+    }
+
+    @Test
+    void createTrackWithNegativeBpmReturns400() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "title", "Track 1",
+                        "artist", "Artist 1",
+                        "duration", "05:05",
+                        "bpm", -120.0
+                ))
+                .when()
+                .post("/api/tracks")
+                .then()
+                .statusCode(400)
+                .body("errors.bpm", equalTo("BPM must be positive if provided"));
+    }
+
+    @Test
+    void updateTrackWithEmptyTitleReturns400() {
+        long trackId = createTrack("Original Title", "Artist", 120.0, "Am", "03:30");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "title", "   ",
+                        "artist", "Artist",
+                        "duration", "03:30"
+                ))
+                .when()
+                .put("/api/tracks/{id}", trackId)
+                .then()
+                .statusCode(400)
+                .body("errors.title", equalTo("Title must not be empty"));
+    }
+
+    @Test
+    void patchTrackWithInvalidDurationReturns400() {
+        long trackId = createTrack("Original Title", "Artist", 120.0, "Am", "03:30");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("duration", "abc"))
+                .when()
+                .patch("/api/tracks/{id}", trackId)
+                .then()
+                .statusCode(400)
+                .body("errors.duration", equalTo("Duration must be in mm:ss format if provided"));
+    }
+
+    @Test
+    void patchTrackWithEmptyTitleReturns400() {
+        long trackId = createTrack("Original Title", "Artist", 120.0, "Am", "03:30");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("title", ""))
+                .when()
+                .patch("/api/tracks/{id}", trackId)
+                .then()
+                .statusCode(400)
+                .body("errors.title", equalTo("Title must not be empty if provided"));
+    }
     // ==================== Helper methods ====================
 
     /**

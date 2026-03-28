@@ -255,6 +255,88 @@ public class PlaylistControllerIntegrationTest extends BaseIntegrationTest {
                 .body("tracks", hasSize(0));
     }
 
+    // ==================== Validation Tests ====================
+
+    @Test
+    void createPlaylistWithNullNameReturns400() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of())
+                .when()
+                .post("/api/playlists")
+                .then()
+                .statusCode(400)
+                .body("errors.name", equalTo("Name must not be empty"));
+    }
+
+    @Test
+    void createPlaylistWithEmptyNameReturns400() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("name", "   "))
+                .when()
+                .post("/api/playlists")
+                .then()
+                .statusCode(400)
+                .body("errors.name", equalTo("Name must not be empty"));
+    }
+
+    @Test
+    void createPlaylistWithDescriptionTooLongReturns400() {
+        String longDescription = "A".repeat(501);
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("name", "Valid", "description", longDescription))
+                .when()
+                .post("/api/playlists")
+                .then()
+                .statusCode(400)
+                .body("errors.description", equalTo("Description must not exceed 500 characters"));
+    }
+
+    @Test
+    void updatePlaylistWithNullNameReturns400() {
+        long playlistId = createPlaylist("Valid", "Desc");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("description", "New Desc"))
+                .when()
+                .put("/api/playlists/{id}", playlistId)
+                .then()
+                .statusCode(400)
+                .body("errors.name", equalTo("Name must not be empty"));
+    }
+
+    @Test
+    void patchPlaylistWithEmptyNameReturns400() {
+        long playlistId = createPlaylist("Valid", "Desc");
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("name", ""))
+                .when()
+                .patch("/api/playlists/{id}", playlistId)
+                .then()
+                .statusCode(400)
+                .body("errors.name", equalTo("Name must not be empty if provided"));
+    }
+
+    @Test
+    void patchPlaylistWithDescriptionTooLongReturns400() {
+        long playlistId = createPlaylist("Valid", "Desc");
+        String longDescription = "A".repeat(501);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("description", longDescription))
+                .when()
+                .patch("/api/playlists/{id}", playlistId)
+                .then()
+                .statusCode(400)
+                .body("errors.description", equalTo("Description must not exceed 500 characters"));
+    }
+
     // ==================== Helper methods ====================
 
     /**
