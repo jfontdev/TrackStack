@@ -7,8 +7,6 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import java.util.List;
-
 /**
  * Testcontainers configuration for integration tests.
  *
@@ -23,30 +21,20 @@ class TestcontainersConfiguration {
     /**
      * Starts a PostgreSQL container and registers it as the test datasource.
      *
-     * <p>The container uses fixed connection settings to make it easy to inspect
-     * the database during a paused test run.</p>
+     * <p>The container uses a random host port assigned by Testcontainers to avoid
+     * port conflicts when multiple test contexts start in the same JVM run.
+     * {@link ServiceConnection} automatically wires the dynamic JDBC URL into the
+     * application context.</p>
      *
      * @return a configured {@link PostgreSQLContainer} ready for test use
      */
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgresContainer() {
-        int hostPort = 54329;
-        String databaseName = "trackstack_test";
-        String username = "trackstack";
-        String password = "trackstack";
-
-        // Create and configure the PostgreSQL container with fixed settings
-        PostgreSQLContainer<?> container = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
-                .withDatabaseName(databaseName)
-                .withUsername(username)
-                .withPassword(password)
-                .withExposedPorts(5432);
-
-        // Map the container's internal port 5432 to a fixed host port for easy access
-        container.setPortBindings(List.of(hostPort + ":5432"));
-
-        return container;
+        return new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
+                .withDatabaseName("trackstack_test")
+                .withUsername("trackstack")
+                .withPassword("trackstack");
     }
 
     /**

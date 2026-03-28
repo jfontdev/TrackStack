@@ -144,15 +144,23 @@ Status: ✅ Completed
 
 ---
 
-## 🔜 Phase 06 – Update & Delete Operations
+## ✅ Phase 06 – Update & Delete Operations
 
 **Goal:** Complete CRUD cycle properly.
 
-- PUT endpoints
-- DELETE endpoints
-- Cache invalidation on writes
-- Proper transaction boundaries
-- Validation rules
+- PUT endpoints (full update with validation)
+- PATCH endpoints (partial update, nullable fields)
+- DELETE endpoints (with 204 No Content)
+- Relationship management endpoints (add/remove tags from tracks, tracks from playlists)
+- Entity `update()` methods for controlled mutation
+- V5 Flyway migration: `ON DELETE CASCADE` on join table foreign keys
+- Enriched response DTOs (tracks include tags, playlists include tracks)
+- `DataIntegrityViolationException` → 409 Conflict handler
+- `@Transactional` + `@CacheEvict(allEntries=true)` on all write operations
+- Update/Patch request DTOs per entity
+- Integration tests for all new endpoints
+
+Status: ✅ Completed
 
 ---
 
@@ -249,4 +257,4 @@ The project will be considered “enterprise-ready” when:
 
 # 📌 Current Phase
 
-👉 Phase 06 – Update & Delete Operations
+👉 Phase 07 – Pagination & Filtering
