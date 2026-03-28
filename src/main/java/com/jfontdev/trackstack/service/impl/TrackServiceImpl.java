@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -174,14 +175,19 @@ public class TrackServiceImpl implements TrackService {
     /**
      * {@inheritDoc}
      * <p>
-     * <b>Cache Eviction:</b> Evicts all entries in the "tracks" cache because
-     * deleting a track invalidates the list cache.
+     * <b>Cache Eviction:</b> Evicts all entries in the "tracks" cache and
+     * "playlists"
+     * cache because deleting a track invalidates both the tracks list cache
+     * and any playlist that contained this track.
      */
     @Override
-    @CacheEvict(value = "tracks", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "tracks", allEntries = true),
+            @CacheEvict(value = "playlists", allEntries = true)
+    })
     @Transactional
     public void deleteTrack(Long id) {
-        log.info("Evicting 'tracks' cache. Deleting track with id: {}", id);
+        log.info("Evicting 'tracks' and 'playlists' caches. Deleting track with id: {}", id);
         Track track = findTrackOrThrow(id);
 
         trackRepository.delete(track);
