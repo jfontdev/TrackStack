@@ -2,6 +2,7 @@ package com.jfontdev.trackstack;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
 
 /**
  * The main entry point for the Trackstack application.
@@ -10,8 +11,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * {@link SpringBootApplication} which enables auto-configuration, component
  * scanning,
  * and configuration properties.
+ * Additionally, {@link EnableSpringDataWebSupport} is used to configure how
+ * Spring Data handles pagination and sorting in web requests, specifying that
  */
 @SpringBootApplication
+@EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 public class TrackstackApplication {
 
     /**
