@@ -1,6 +1,7 @@
 package com.jfontdev.trackstack.controller;
 
 import com.jfontdev.trackstack.dto.track.TrackPatchRequestDTO;
+import com.jfontdev.trackstack.dto.track.TrackPageResponseDTO;
 import com.jfontdev.trackstack.dto.track.TrackRequestDTO;
 import com.jfontdev.trackstack.dto.track.TrackResponseDTO;
 import com.jfontdev.trackstack.dto.track.TrackUpdateRequestDTO;
@@ -9,8 +10,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * REST controller for managing tracks.
@@ -59,13 +58,33 @@ public class TrackController {
     }
 
     /**
-     * Retrieves all tracks.
+     * Retrieves tracks using pagination, sorting, and optional filters.
+     * <p>
+     * Default query values are {@code page=0}, {@code size=20}, and
+     * {@code sort=title,asc}. Optional filters can narrow the result set by
+     * BPM range, musical key, and genre.
+     * </p>
      *
-     * @return 200 OK with a list of all tracks
+     * @param page       zero-based page index (default 0)
+     * @param size       page size (default 20)
+     * @param sort       sort expression in the format "field,direction"
+     *                   (default "title,asc")
+     * @param bpmMin     optional minimum BPM filter (inclusive)
+     * @param bpmMax     optional maximum BPM filter (inclusive)
+     * @param musicalKey optional exact key filter
+     * @param genre      optional exact genre filter
+     * @return 200 OK with a page of tracks
      */
     @GetMapping
-    public List<TrackResponseDTO> getAll() {
-        return trackService.getAllTracks();
+    public TrackPageResponseDTO getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "title,asc") String sort,
+            @RequestParam(required = false) Double bpmMin,
+            @RequestParam(required = false) Double bpmMax,
+            @RequestParam(name = "key", required = false) String musicalKey,
+            @RequestParam(required = false) String genre) {
+        return trackService.getAllTracks(page, size, sort, bpmMin, bpmMax, musicalKey, genre);
     }
 
     /**
