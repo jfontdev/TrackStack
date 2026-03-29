@@ -11,7 +11,8 @@ import java.util.Set;
  * <p>
  * Tracks are the core domain object in TrackStack. Each track has metadata
  * such as title, artist, BPM, musical key, and duration. Tracks can be
- * associated with multiple {@link Tag}s and belong to multiple {@link Playlist}s
+ * associated with multiple {@link Tag}s and belong to multiple
+ * {@link Playlist}s
  * through many-to-many relationships.
  * <p>
  * This entity follows the static factory method pattern for creation
@@ -32,13 +33,10 @@ public class Track {
     private Double bpm;
     private String key; // musical key
     private String duration;
+    private String genre;
 
     @ManyToMany
-    @JoinTable(
-            name = "track_tags",
-            joinColumns = @JoinColumn(name = "track_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+    @JoinTable(name = "track_tags", joinColumns = @JoinColumn(name = "track_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private Set<Tag> tags = new HashSet<>();
 
     @ManyToMany(mappedBy = "tracks")
@@ -52,13 +50,15 @@ public class Track {
      * @param bpm      the beats per minute
      * @param key      the musical key (e.g., "A minor")
      * @param duration the track duration (e.g., "3:45")
+     * @param genre    the track genre (e.g., "House")
      */
-    public Track(String title, String artist, Double bpm, String key, String duration) {
+    public Track(String title, String artist, Double bpm, String key, String duration, String genre) {
         this.title = title;
         this.artist = artist;
         this.bpm = bpm;
         this.key = key;
         this.duration = duration;
+        this.genre = genre;
     }
 
     /**
@@ -79,10 +79,11 @@ public class Track {
      * @param bpm      the beats per minute
      * @param key      the musical key
      * @param duration the track duration
+     * @param genre    the track genre
      * @return a new Track instance with the provided field values
      */
-    public static Track create(String title, String artist, Double bpm, String key, String duration) {
-        return new Track(title, artist, bpm, key, duration);
+    public static Track create(String title, String artist, Double bpm, String key, String duration, String genre) {
+        return new Track(title, artist, bpm, key, duration, genre);
     }
 
     /**
@@ -99,13 +100,15 @@ public class Track {
      * @param bpm      the new beats per minute
      * @param key      the new musical key
      * @param duration the new track duration
+     * @param genre    the new track genre
      */
-    public void update(String title, String artist, Double bpm, String key, String duration) {
+    public void update(String title, String artist, Double bpm, String key, String duration, String genre) {
         this.title = title;
         this.artist = artist;
         this.bpm = bpm;
         this.key = key;
         this.duration = duration;
+        this.genre = genre;
     }
 
     /**
@@ -158,6 +161,10 @@ public class Track {
 
     public String getDuration() {
         return duration;
+    }
+
+    public String getGenre() {
+        return genre;
     }
 
     /**
