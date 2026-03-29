@@ -1,11 +1,10 @@
 package com.jfontdev.trackstack.service;
 
 import com.jfontdev.trackstack.dto.track.TrackPatchRequestDTO;
+import com.jfontdev.trackstack.dto.track.TrackPageResponseDTO;
 import com.jfontdev.trackstack.dto.track.TrackRequestDTO;
 import com.jfontdev.trackstack.dto.track.TrackResponseDTO;
 import com.jfontdev.trackstack.dto.track.TrackUpdateRequestDTO;
-
-import java.util.List;
 
 /**
  * Service interface for managing {@link com.jfontdev.trackstack.model.Track}
@@ -37,11 +36,29 @@ public interface TrackService {
     TrackResponseDTO getTrackById(Long id);
 
     /**
-     * Retrieves all tracks in the system.
+     * Retrieves tracks using pagination, sorting, and optional filters.
+     * <p>
+     * This method powers the Phase 07 list endpoint and supports production-ready
+     * query patterns without exposing persistence details to the controller.
+     * </p>
      *
-     * @return a list of response DTOs representing all tracks
+     * @param page       the zero-based page index
+     * @param size       the page size
+     * @param sort       sort expression in the format "field,direction"
+     *                   (example: "title,asc")
+     * @param bpmMin     optional minimum BPM (inclusive)
+     * @param bpmMax     optional maximum BPM (inclusive)
+     * @param musicalKey optional exact musical key filter
+     * @param genre      optional exact genre filter
+     * @return a cache-safe paginated response containing tracks and page metadata
      */
-    List<TrackResponseDTO> getAllTracks();
+    TrackPageResponseDTO getAllTracks(int page,
+            int size,
+            String sort,
+            Double bpmMin,
+            Double bpmMax,
+            String musicalKey,
+            String genre);
 
     /**
      * Fully updates an existing track (PUT semantics).
