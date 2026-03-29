@@ -58,8 +58,10 @@ public class PlaylistServiceImpl implements PlaylistService {
      * We inject both {@link PlaylistRepository} and {@link TrackRepository} because
      * this service manages the Playlist-Track relationship (the owning side).
      *
-     * @param playlistRepository the repository used for database operations on playlists
-     * @param trackRepository    the repository used to look up tracks for relationship management
+     * @param playlistRepository the repository used for database operations on
+     *                           playlists
+     * @param trackRepository    the repository used to look up tracks for
+     *                           relationship management
      */
     public PlaylistServiceImpl(PlaylistRepository playlistRepository, TrackRepository trackRepository) {
         this.playlistRepository = playlistRepository;
@@ -283,6 +285,7 @@ public class PlaylistServiceImpl implements PlaylistService {
                             track.getBpm(),
                             track.getKey(),
                             track.getDuration(),
+                            track.getGenre(),
                             tagDTOs);
                 })
                 .sorted(Comparator.comparing(TrackResponseDTO::title))
