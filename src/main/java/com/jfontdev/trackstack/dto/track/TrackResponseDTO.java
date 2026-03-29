@@ -17,13 +17,15 @@ import java.util.List;
  * @param bpm      the beats per minute
  * @param key      the musical key
  * @param duration the track duration
+ * @param genre    the track genre
  * @param tags     the tags associated with this track
  */
 public record TrackResponseDTO(Long id,
-                               String title,
-                               String artist,
-                               Double bpm,
-                               String key,
-                               String duration,
-                               List<TagResponseDTO> tags) {
+        String title,
+        String artist,
+        Double bpm,
+        String key,
+        String duration,
+        String genre,
+        List<TagResponseDTO> tags) {
 }

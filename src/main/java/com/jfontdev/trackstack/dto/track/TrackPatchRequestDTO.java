@@ -18,10 +18,12 @@ import jakarta.validation.constraints.Size;
  * @param bpm      the new beats per minute, or null to keep the current value
  * @param key      the new musical key, or null to keep the current value
  * @param duration the new track duration, or null to keep the current value
+ * @param genre    the new track genre, or null to keep the current value
  */
 public record TrackPatchRequestDTO(@Size(min = 1, message = "Title must not be empty if provided") String title,
-        @Size(min = 1, message = "Artist must not be empty if provided") String artist,
-        @Positive(message = "BPM must be positive if provided") Double bpm,
-        String key,
-        @Pattern(regexp = "^\\d+:\\d{2}$", message = "Duration must be in mm:ss format if provided") String duration) {
+                @Size(min = 1, message = "Artist must not be empty if provided") String artist,
+                @Positive(message = "BPM must be positive if provided") Double bpm,
+                String key,
+                @Pattern(regexp = "^\\d+:\\d{2}$", message = "Duration must be in mm:ss format if provided") String duration,
+                @Size(min = 1, message = "Genre must not be empty if provided") String genre) {
 }
