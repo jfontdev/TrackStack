@@ -2,6 +2,8 @@ package com.jfontdev.trackstack.service.impl;
 
 import com.jfontdev.trackstack.dto.tag.TagResponseDTO;
 import com.jfontdev.trackstack.dto.track.TrackPatchRequestDTO;
+import com.jfontdev.trackstack.dto.track.TrackPageMetadataDTO;
+import com.jfontdev.trackstack.dto.track.TrackPageResponseDTO;
 import com.jfontdev.trackstack.dto.track.TrackRequestDTO;
 import com.jfontdev.trackstack.dto.track.TrackResponseDTO;
 import com.jfontdev.trackstack.dto.track.TrackUpdateRequestDTO;
@@ -10,18 +12,26 @@ import com.jfontdev.trackstack.model.Tag;
 import com.jfontdev.trackstack.model.Track;
 import com.jfontdev.trackstack.repository.TagRepository;
 import com.jfontdev.trackstack.repository.TrackRepository;
+import com.jfontdev.trackstack.repository.TrackSpecifications;
 import com.jfontdev.trackstack.service.TrackService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Implementation of the {@link TrackService} interface.
@@ -33,8 +43,9 @@ import java.util.Optional;
  * <p>
  * <b>Caching Strategy:</b>
  * We use Spring's caching abstraction to improve read performance.
- * - Read operations ({@code getTrackById}, {@code getAllTracks}) are cached
- * under the "tracks" cache.
+ * - Read operation {@code getTrackById} is cached under the "tracks" cache.
+ * - The pageable list operation {@code getAllTracks} is cached using a
+ * cache-safe DTO response that avoids direct {@code PageImpl} serialization.
  * - Write operations (create, update, patch, delete, and relationship changes)
  * evict the entire "tracks" cache to ensure that subsequent reads do not
  * return stale data.
@@ -50,6 +61,9 @@ import java.util.Optional;
 public class TrackServiceImpl implements TrackService {
 
     private static final Logger log = LoggerFactory.getLogger(TrackServiceImpl.class);
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "title", "artist", "bpm", "key", "duration",
+            "genre");
 
     private final TrackRepository trackRepository;
     private final TagRepository tagRepository;
@@ -85,7 +99,8 @@ public class TrackServiceImpl implements TrackService {
                 dto.artist(),
                 dto.bpm(),
                 dto.key(),
-                dto.duration());
+                dto.duration(),
+                dto.genre());
 
         Track savedTrack = trackRepository.saveAndFlush(track);
 
@@ -112,18 +127,104 @@ public class TrackServiceImpl implements TrackService {
     /**
      * {@inheritDoc}
      * <p>
-     * <b>Caching:</b> The entire list of tracks is cached. This is highly efficient
-     * for read-heavy workloads, but requires careful eviction whenever a track
-     * is added, updated, or deleted to prevent stale data.
+     * <b>Caching:</b> The result of this method is cached using a cache-safe DTO
+     * response that includes both the track list and pagination metadata. The cache
+     * key is constructed from all query parameters to ensure that different filter
+     * combinations are cached separately. This avoids issues with directly caching
+     * {@code PageImpl} objects, which can cause serialization problems and cache
+     * pollution due to their internal state and non-deterministic nature.
+     * <p>
+     * The method includes validation for paging parameters and BPM filters to
+     * ensure
+     * that only valid queries are processed, which also helps maintain cache
+     * integrity by preventing caching of invalid requests.
+     * <p>
      */
     @Override
-    @Cacheable(value = "tracks")
+    @Cacheable(value = "tracks", key = "'list-v2|page=' + #page + '|size=' + #size + '|sort=' + #sort + '|bpmMin=' + #bpmMin + '|bpmMax=' + #bpmMax + '|musicalKey=' + #musicalKey + '|genre=' + #genre")
     @Transactional(readOnly = true)
-    public List<TrackResponseDTO> getAllTracks() {
-        log.info("Cache miss for 'tracks' list. Fetching all tracks from database.");
-        return trackRepository.findAll().stream()
+    public TrackPageResponseDTO getAllTracks(int page,
+            int size,
+            String sort,
+            Double bpmMin,
+            Double bpmMax,
+            String musicalKey,
+            String genre) {
+        // We perform validation on paging parameters and BPM filters to ensure that
+        // only valid queries are processed and cached.
+        validatePageRequest(page, size);
+        validateBpmRange(bpmMin, bpmMax);
+
+        // We parse and validate the sort parameter to ensure it conforms to expected
+        Sort parsedSort = parseSort(sort);
+
+        // We normalize optional string filters to trim whitespace and treat empty
+        // values as null
+        Pageable pageable = PageRequest.of(page, size, parsedSort);
+
+        // Normalizing filter values ensures consistent cache keys and avoids issues
+        // with leading/trailing whitespace.
+        String normalizedKey = normalizeFilterValue(musicalKey);
+        String normalizedGenre = normalizeFilterValue(genre);
+
+        log.info(
+                "Cache miss for 'tracks' list query (page={}, size={}, sort={}, bpmMin={}, bpmMax={}, key={}, genre={}). Fetching from database.",
+                page,
+                size,
+                sort,
+                bpmMin,
+                bpmMax,
+                normalizedKey,
+                normalizedGenre);
+
+        Specification<Track> specification = Specification.unrestricted();
+
+        // We only add specifications for filters that are provided to avoid unnecessary
+        // predicates that could impact query performance.
+        if (bpmMin != null) {
+            specification = specification.and(TrackSpecifications.hasBpmGreaterThanOrEqualTo(bpmMin));
+        }
+
+        if (bpmMax != null) {
+            specification = specification.and(TrackSpecifications.hasBpmLessThanOrEqualTo(bpmMax));
+        }
+
+        if (normalizedKey != null) {
+            specification = specification.and(TrackSpecifications.hasMusicalKey(normalizedKey));
+        }
+
+        if (normalizedGenre != null) {
+            specification = specification.and(TrackSpecifications.hasGenre(normalizedGenre));
+        }
+
+        // We execute the query with the constructed specification and pageable. The
+        // result is a Page of Track entities, which we then map to a list of
+        // TrackResponseDTOs. We also construct a TrackPageMetadataDTO to include
+        // pagination information in the response. This approach allows us to return a
+        // cache-safe DTO response that includes both the data and metadata without
+        // exposing internal PageImpl details.
+        Page<Track> tracksPage = trackRepository.findAll(specification, pageable);
+
+        // We map the Track entities to TrackResponseDTOs. This mapping is done
+        // in-memory after fetching the data, which is acceptable for the page size
+        // limits we have in place. It also allows us to keep the caching layer simple
+        // by caching the final DTO response rather than trying to cache complex JPA
+        // Page objects.
+        List<TrackResponseDTO> content = tracksPage.getContent().stream()
                 .map(this::mapToResponseDTO)
                 .toList();
+
+        // We construct the pagination metadata DTO from the Page object. This includes
+        // the page size, current page number, total elements, and total pages. This
+        // metadata is essential for clients to understand the pagination context of the
+        // response and to navigate through pages effectively.
+        TrackPageMetadataDTO pageMetadata = new TrackPageMetadataDTO(
+                tracksPage.getSize(),
+                tracksPage.getNumber(),
+                tracksPage.getTotalElements(),
+                tracksPage.getTotalPages());
+
+        return new TrackPageResponseDTO(content, pageMetadata);
     }
 
     /**
@@ -144,7 +245,7 @@ public class TrackServiceImpl implements TrackService {
         log.info("Evicting 'tracks' and 'playlists' caches. Updating track with id: {}", id);
         Track track = findTrackOrThrow(id);
 
-        track.update(dto.title(), dto.artist(), dto.bpm(), dto.key(), dto.duration());
+        track.update(dto.title(), dto.artist(), dto.bpm(), dto.key(), dto.duration(), dto.genre());
         Track savedTrack = trackRepository.saveAndFlush(track);
 
         return mapToResponseDTO(savedTrack);
@@ -175,8 +276,9 @@ public class TrackServiceImpl implements TrackService {
         Double bpm = dto.bpm() != null ? dto.bpm() : track.getBpm();
         String key = dto.key() != null ? dto.key() : track.getKey();
         String duration = dto.duration() != null ? dto.duration() : track.getDuration();
+        String genre = dto.genre() != null ? dto.genre() : track.getGenre();
 
-        track.update(title, artist, bpm, key, duration);
+        track.update(title, artist, bpm, key, duration, genre);
         Track savedTrack = trackRepository.saveAndFlush(track);
 
         return mapToResponseDTO(savedTrack);
@@ -254,6 +356,99 @@ public class TrackServiceImpl implements TrackService {
     }
 
     /**
+     * Validates the requested page index and page size values.
+     *
+     * @param page the zero-based page index
+     * @param size the page size
+     * @throws IllegalArgumentException if paging values are outside accepted bounds
+     */
+    private void validatePageRequest(int page, int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("Page must be greater than or equal to 0.");
+        }
+
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("Size must be between 1 and " + MAX_PAGE_SIZE + ".");
+        }
+    }
+
+    /**
+     * Validates BPM filter values and range ordering.
+     *
+     * @param bpmMin the minimum BPM filter (inclusive)
+     * @param bpmMax the maximum BPM filter (inclusive)
+     * @throws IllegalArgumentException if values are non-positive or range is
+     *                                  invalid
+     */
+    private void validateBpmRange(Double bpmMin, Double bpmMax) {
+        if (bpmMin != null && bpmMin <= 0) {
+            throw new IllegalArgumentException("bpmMin must be positive.");
+        }
+
+        if (bpmMax != null && bpmMax <= 0) {
+            throw new IllegalArgumentException("bpmMax must be positive.");
+        }
+
+        if (bpmMin != null && bpmMax != null && bpmMin > bpmMax) {
+            throw new IllegalArgumentException("bpmMin must be less than or equal to bpmMax.");
+        }
+    }
+
+    /**
+     * Parses and validates a sort expression in {@code field,direction} format.
+     *
+     * @param sort the sort expression
+     * @return a validated {@link Sort} instance
+     * @throws IllegalArgumentException if sort input is malformed or unsupported
+     */
+    private Sort parseSort(String sort) {
+        if (!StringUtils.hasText(sort)) {
+            return Sort.by(Sort.Direction.ASC, "title");
+        }
+
+        String[] sortParts = sort.split(",");
+        if (sortParts.length != 2) {
+            throw new IllegalArgumentException("Sort must use the format field,direction.");
+        }
+
+        String sortField = sortParts[0].trim().toLowerCase();
+        String sortDirection = sortParts[1].trim().toLowerCase();
+
+        if (!StringUtils.hasText(sortField)) {
+            throw new IllegalArgumentException("Sort field must not be empty.");
+        }
+
+        if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
+            throw new IllegalArgumentException("Unsupported sort field: " + sortField + ".");
+        }
+
+        Sort.Direction direction;
+        if ("asc".equals(sortDirection)) {
+            direction = Sort.Direction.ASC;
+        } else if ("desc".equals(sortDirection)) {
+            direction = Sort.Direction.DESC;
+        } else {
+            throw new IllegalArgumentException("Sort direction must be 'asc' or 'desc'.");
+        }
+
+        return Sort.by(direction, sortField);
+    }
+
+    /**
+     * Normalizes optional string filters by trimming whitespace.
+     *
+     * @param value the raw filter value from request parameters
+     * @return trimmed value, or {@code null} when empty
+     */
+    private String normalizeFilterValue(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+
+        return value.trim();
+    }
+
+    /**
      * Finds a track by ID or throws a {@link NotFoundException}.
      * <p>
      * This is an internal helper that centralizes the Optional handling
@@ -316,6 +511,7 @@ public class TrackServiceImpl implements TrackService {
                 track.getBpm(),
                 track.getKey(),
                 track.getDuration(),
+                track.getGenre(),
                 tagDTOs);
     }
 }
