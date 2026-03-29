@@ -3,7 +3,7 @@ spring:
     name: trackstack
 
   profiles:
-    active: dev
+    active: dev,local
 
   data:
     redis:
