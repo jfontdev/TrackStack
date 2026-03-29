@@ -164,15 +164,28 @@ Status: ✅ Completed
 
 ---
 
-## 🔜 Phase 07 – Pagination & Filtering
+## ✅ Phase 07 – Track Pagination & Filtering
 
 **Goal:** Production-ready API patterns.
 
-- Pageable endpoints
-- Sorting
-- Filter by BPM / Key / Genre
-- Repository query methods
-- Possibly Specifications
+- Pageable endpoint for tracks
+- Sorting support for track list retrieval
+- Filter by BPM / Key / Genre (tracks)
+- Repository query support for dynamic filtering
+- Integration test coverage for pagination, sorting, and filtering
+
+Status: ✅ Completed
+
+---
+
+## 🔜 Phase 07.5 – Pagination for Remaining Endpoints
+
+**Goal:** Extend pagination patterns consistently beyond tracks.
+
+- Pageable endpoints for tags and playlists
+- Sorting support for tags and playlists list endpoints
+- Consistent response shape and query parameter conventions
+- Integration tests for paginated tags and playlists
 
 ---
 
@@ -257,4 +270,4 @@ The project will be considered “enterprise-ready” when:
 
 # 📌 Current Phase
 
-👉 Phase 07 – Pagination & Filtering
+👉 Phase 07.5 – Pagination for Remaining Endpoints
