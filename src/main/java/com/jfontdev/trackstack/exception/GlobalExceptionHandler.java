@@ -21,7 +21,8 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     /**
-     * Handles {@link NotFoundException} thrown when a requested entity does not exist.
+     * Handles {@link NotFoundException} thrown when a requested entity does not
+     * exist.
      * <p>
      * Returns a 404 Not Found response with the exception message in the body.
      *
@@ -38,7 +39,8 @@ public class GlobalExceptionHandler {
      * Handles {@link MethodArgumentNotValidException} thrown when request body
      * validation fails (e.g., {@code @NotBlank} constraints).
      * <p>
-     * Returns a 400 Bad Request response with a map of field names to error messages.
+     * Returns a 400 Bad Request response with a map of field names to error
+     * messages.
      *
      * @param ex the validation exception
      * @return a map containing field-level error messages
@@ -47,7 +49,8 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(field -> errors.putIfAbsent(field.getField(), field.getDefaultMessage()));
+        ex.getBindingResult().getFieldErrors()
+                .forEach(field -> errors.putIfAbsent(field.getField(), field.getDefaultMessage()));
 
         return Map.of("errors", errors);
     }
@@ -57,8 +60,10 @@ public class GlobalExceptionHandler {
      * constraint is violated (e.g., unique constraint on tag name, foreign key
      * violations).
      * <p>
-     * Returns a 409 Conflict response with a generic error message. We intentionally
-     * do not expose the underlying database error details to the client for security
+     * Returns a 409 Conflict response with a generic error message. We
+     * intentionally
+     * do not expose the underlying database error details to the client for
+     * security
      * reasons.
      *
      * @param ex the data integrity violation exception
@@ -68,5 +73,23 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public Map<String, String> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         return Map.of("error", "Operation violates a data integrity constraint.");
+    }
+
+    /**
+     * Handles {@link IllegalArgumentException} thrown by service-level guard
+     * clauses.
+     * <p>
+     * This maps invalid query parameter combinations (for example paging bounds,
+     * malformed sort expressions, or invalid filter ranges) to a 400 Bad Request
+     * with a readable error message.
+     * </p>
+     *
+     * @param ex the illegal argument exception
+     * @return a map containing the error message
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleIllegalArgument(IllegalArgumentException ex) {
+        return Map.of("error", ex.getMessage());
     }
 }
