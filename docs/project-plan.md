@@ -9,6 +9,7 @@ TrackStack is an enterprise-style Spring Boot backend built to:
 - Implement real-world backend patterns
 - Learn caching, transactions, and integration testing
 - Build a portfolio-grade backend repository
+- **NEW:** Serve as a personal DJ Set Planner & Performance Intelligence Platform
 
 This is not a tutorial project. It is structured intentionally to simulate real backend engineering.
 
@@ -28,6 +29,8 @@ This is not a tutorial project. It is structured intentionally to simulate real 
 - No microservices
 - No reactive stack
 - No Hibernate auto schema generation
+- **NEW:** AI as enhancement, not core dependency
+- **NEW:** Graceful degradation (AI down → rule-based fallback)
 
 ---
 
@@ -35,189 +38,186 @@ This is not a tutorial project. It is structured intentionally to simulate real 
 
 ---
 
-## ✅ Phase 01 – Project Setup
+## ✅ Phase 00 – Project Reset & Foundation
 
-**Goal:** Establish clean baseline.
+**Goal:** Clean slate from generic music API to DJ-focused domain.
 
 - Spring Boot 3.x
 - PostgreSQL (local)
-- Flyway migrations
+- Flyway migrations (V1 drops old schema, creates DJ domain)
 - Swagger / OpenAPI
 - Proper application profiles
 - No `ddl-auto=update`
 - GitHub repo initialized
+- **Decision:** Start fresh schema (drop old Tracks/Tags/Playlists tables)
 
-Status: ✅ Completed
-
----
-
-## ✅ Phase 02 – Domain & Persistence
-
-**Goal:** Model the domain correctly.
-
-- Track entity
-- Tag entity
-- Playlist entity
-- Many-to-many relationships
-- Join tables
-- Flyway migrations
-- Pure `JpaRepository` usage
-
-Status: ✅ Completed
+Status: ✅ Completed (metadata, architecture docs)
 
 ---
 
-## ✅ Phase 03 – Application Layer & REST API
+## 🔜 Phase 01 – Smart Track Library (Minimal)
 
-**Goal:** Implement clean service & controller layers.
+**Goal:** Auto-populate from your real music files quickly, then move on.
 
-- Request / Response DTOs
-- Explicit Optional handling
-- Service interfaces + implementations
-- Controllers
-- Global exception handling
-- No mappers (manual mapping inside services)
+- File Scanner Service: Scan `C:\Users\jordi\Documents\MEGA\Musica DJ`
+- Read audio metadata via JAudioTagger (BPM, Key, Genre, Duration)
+- Use folder structure as genre taxonomy
+- Track entity with file path linking
+- Duplicate detection
+- Search & Filter: BPM range, Key, Genre, Energy
+- **Decision:** Scan ALL files recursively; folder name = genre tag
+- **Decision:** Energy is hybrid (manual override with future AI suggestions)
 
-Status: ✅ Completed
+**Endpoints:**
+- `POST /api/tracks/scan` - Trigger directory scan
+- `GET /api/tracks?bpmFrom=130&bpmTo=140&key=11B&genre=Techno`
+- `GET /api/tracks/{id}`
 
----
+**Tech:** JAudioTagger library, Jackson for metadata parsing
 
-## ✅ Phase 04 – Caching
-
-**Goal:** Introduce controlled performance optimization.
-
-- Enable Spring caching
-- Apply `@Cacheable` to read operations
-- Use `@CacheEvict` on write operations
-- In-memory cache (default Spring CacheManager)
-- Cache only `getById` methods initially
-- Document caching strategy in README
-
-Deliverables:
-
-- Clean caching annotations
-- No caching in controllers or repositories
-- No premature Redis integration
-
-Status: ✅ Completed
+**Duration:** 1-2 weeks (minimal viable, don't over-engineer)
 
 ---
 
-## ✅ Phase 4.5 – Redis Caching
+## 🔜 Phase 02 – Transition Graph (Priority)
 
-**Goal:** Upgrade in-memory cache to a distributed cache using Redis.
+**Goal:** Replace `mezclas.md` with a queryable, intelligent transition database.
 
-- Add `spring-boot-starter-data-redis` dependency
-- Create `docker-compose.yml` for local Redis instance
-- Configure `RedisCacheManager` with JSON serialization
-- Set default Time-To-Live (TTL) for cache entries
-- Update application properties for Redis connection
+**Decision:** This is the priority phase. Build fast after Phase 01.
 
-Deliverables:
+**Core Features:**
+- Log Transitions: `POST /api/transitions`
+  - `{sourceTrackId, targetTrackId, rating, notes, style}`
+  - Auto-calculates key compatibility, BPM diff
+- Directed transitions: A→B is separate from B→A (different ratings)
+- View transitions per track
+- Transition stats: most reliable, your "signature" transitions
+- Key/BPM Compatibility Engine: rule-based suggestions
 
-- `docker-compose.yml` with Redis service
-- Updated `CacheConfig.java` using Redis
-- JSON serialized cache entries in Redis
+**Endpoints:**
+- `POST /api/transitions` (log a transition)
+- `GET /api/transitions/from/{trackId}`
+- `GET /api/transitions/to/{trackId}`
+- `GET /api/transitions/best?trackId=123&limit=5`
 
-Status: ✅ Completed
-
----
-
-## ✅ Phase 05 – Integration Testing
-
-**Goal:** Test full stack behavior.
-
-- Testcontainers with PostgreSQL
-- Rest Assured for API-level integration tests
-- Flyway migrations executed during tests
-- BaseIntegrationTest class
-- Controller → Service → Repository → DB coverage
-- Database cleanup strategy between tests
-
-Deliverables:
-
-- TrackControllerIntegrationTest
-- TagControllerIntegrationTest
-- PlaylistControllerIntegrationTest
-
-Status: ✅ Completed
+**Duration:** 2 weeks
 
 ---
 
-## ✅ Phase 06 – Update & Delete Operations
+## 🔜 Phase 02.5 – AI Transition Suggestions (Priority)
 
-**Goal:** Complete CRUD cycle properly.
+**Goal:** Smart transition suggestions via Ollama (Gemma 4 26b MOE).
 
-- PUT endpoints (full update with validation)
-- PATCH endpoints (partial update, nullable fields)
-- DELETE endpoints (with 204 No Content)
-- Relationship management endpoints (add/remove tags from tracks, tracks from playlists)
-- Entity `update()` methods for controlled mutation
-- V5 Flyway migration: `ON DELETE CASCADE` on join table foreign keys
-- Enriched response DTOs (tracks include tags, playlists include tracks)
-- `DataIntegrityViolationException` → 409 Conflict handler
-- `@Transactional` + `@CacheEvict(allEntries=true)` on all write operations
-- Update/Patch request DTOs per entity
-- Integration tests for all new endpoints
+**Decision:** Priority feature. Implement alongside Phase 02.
 
-Status: ✅ Completed
+**Setup:**
+- `spring-ai-ollama-spring-boot-starter`
+- Local network endpoint: configurable (e.g., `http://amd-ai-hx390:11434`)
+- Model: `gemma4:26b` (primary), fallback to rule-based
 
----
+**Endpoint:**
+- `POST /api/ai/transitions/suggest`
+  - Input: `{trackId: 123, vibe: "maintain energy but add melody", excludeRecentlyPlayed: true}`
+  - AI queries library context, suggests 3 tracks with reasoning
+  - **Fallback:** If Ollama down, use rule-based key/BPM matching
 
-## ✅ Phase 07 – Track Pagination & Filtering
+**Prompt Strategy:**
+- Fetch 50 relevant tracks from core service
+- Include transition history in prompt context
+- Request structured JSON response
+- Parse and return DTO
 
-**Goal:** Production-ready API patterns.
+**Tech:** Spring AI Ollama, `@Async` for non-blocking AI calls
 
-- Pageable endpoint for tracks
-- Sorting support for track list retrieval
-- Filter by BPM / Key / Genre (tracks)
-- Repository query support for dynamic filtering
-- Integration test coverage for pagination, sorting, and filtering
-
-Status: ✅ Completed
+**Duration:** 1-2 weeks (parallel with Phase 02)
 
 ---
 
-## 🔜 Phase 07.5 – Pagination for Remaining Endpoints
+## 🔜 Phase 03 – Set Planning
 
-**Goal:** Extend pagination patterns consistently beyond tracks.
+**Goal:** Build setlists with intelligence.
 
-- Pageable endpoints for tags and playlists
-- Sorting support for tags and playlists list endpoints
-- Consistent response shape and query parameter conventions
-- Integration tests for paginated tags and playlists
+- Setlist Builder: ordered slots with track sequence
+- Energy arc per slot (1-5): Opening → Build → Peak → Cooldown
+- Setlist status: DRAFT → READY → PERFORMED
+- Track-to-track transition validation
+- Setlist export (text/JSON for XDJ-AZ)
+- Preparation time tracking
 
----
+**Endpoints:**
+- `POST /api/setlists` (create with slots)
+- `PUT /api/setlists/{id}/slots/reorder`
+- `GET /api/setlists/{id}/energy-arc`
+- `POST /api/setlists/{id}/export`
 
-## 🔜 Phase 08 – Advanced Caching Strategy
+**AI Enhancement (Phase 03.5):**
+- `POST /api/ai/setlists/analyze` - AI critiques energy arc and flow
+- `POST /api/ai/setlists/generate` - AI generates setlist from natural language
 
-**Goal:** Prepare for scalability.
-
-- Add TTL policies per cache name
-- Cache invalidation strategy review
-- Analyze read-heavy endpoints
-
----
-
-## 🔜 Phase 09 – Observability
-
-**Goal:** Production readiness.
-
-- Actuator endpoints
-- Health checks
-- Metrics
-- Logging strategy
+**Duration:** 2-3 weeks
 
 ---
 
-## 🔜 Phase 10 – Security Layer
+## 🔜 Phase 04 – Performance Journal
 
-**Goal:** Enterprise-level API security.
+**Goal:** Track what actually happened vs. planned.
 
-- Spring Security
-- JWT authentication
-- Role-based access
-- Endpoint protection
+- Session recording: practice or Mixcloud upload
+- Link to setlist (optional), add Mixcloud URL
+- Record actual tracks played vs. planned
+- Session ratings & notes
+- Performance stats by genre
+
+**Endpoints:**
+- `POST /api/sessions`
+- `PUT /api/sessions/{id}/played-tracks`
+- `GET /api/sessions/{id}/comparison` (planned vs actual)
+- `GET /api/sessions/stats`
+
+**AI Enhancement (Phase 04.5):**
+- `POST /api/ai/sessions/insights` - AI analyzes session history patterns
+
+**Duration:** 1-2 weeks
+
+---
+
+## 🔜 Phase 05 – Analytics & Intelligence
+
+**Goal:** Insights your markdown could never provide.
+
+- Play frequency report by genre/time
+- Forgotten gems (not played in X months, fit current trends)
+- Genre evolution over time
+- Transition success rate by genre pair
+- Preparation time tracking by genre
+- Key distribution analysis
+
+**Endpoints:**
+- `GET /api/analytics/play-frequency?genre=Techno&months=6`
+- `GET /api/analytics/forgotten-gems?months=6&limit=10`
+- `GET /api/analytics/genre-trends`
+- `GET /api/analytics/transition-success`
+
+**AI Enhancement (Phase 05.5):**
+- `POST /api/ai/analytics/narrative` - AI-generated narrative report
+
+**Duration:** 2 weeks
+
+---
+
+## 🔜 Phase 06 – Integrations
+
+**Goal:** Connect to external tools.
+
+- Rekordbox XML playlist import
+- Mixcloud URL linking
+- File watchers for `Musica DJ` folder (auto-add new tracks)
+
+**Future (not initial plan):**
+- Real-time Rekordbox sync (if encryption bypassed)
+- Spotify/SoundCloud integration
+
+**Duration:** 1-2 weeks
 
 ---
 
@@ -228,6 +228,9 @@ Status: ✅ Completed
 - No mocking repositories in integration tests
 - Real PostgreSQL via Testcontainers
 - Schema validated via Flyway
+- **NEW:** AI component tests use mocked Ollama responses
+- **NEW:** Test AI fallback logic (rule-based when Ollama unavailable)
+- **NEW:** `@EnabledIf("ai.enabled")` for AI-specific tests
 
 ---
 
@@ -239,6 +242,8 @@ Status: ✅ Completed
 - No front-end
 - No premature abstraction
 - No code generation tools
+- **NEW:** AI is not required for core functionality to work
+- **NEW:** No vector database (RAG-lite via prompt context)
 
 ---
 
@@ -251,13 +256,17 @@ By completing this roadmap, the project will demonstrate:
 - Database migration management
 - Cache strategy design
 - Integration testing mastery
+- **NEW:** Audio file processing (JAudioTagger)
+- **NEW:** Local AI integration (Spring AI + Ollama)
+- **NEW:** Prompt engineering for structured outputs
+- **NEW:** Graceful degradation and fallback strategies
 - Production-ready backend architecture
 
 ---
 
 # 🏁 Success Criteria
 
-The project will be considered “enterprise-ready” when:
+The project will be considered "enterprise-ready" when:
 
 - Full CRUD operations exist
 - Caching strategy is documented and tested
@@ -265,9 +274,58 @@ The project will be considered “enterprise-ready” when:
 - Clear architectural documentation exists
 - No accidental framework magic
 - All decisions are intentional and documented
+- **NEW:** AI features enhance but don't block core functionality
+- **NEW:** Track library auto-scanned from real files
+- **NEW:** Transition suggestions work with and without AI
 
 ---
 
 # 📌 Current Phase
 
-👉 Phase 07.5 – Pagination for Remaining Endpoints
+👉 Phase 02 – Transition Graph (Priority)
+
+**Next immediate action:** Implement Phase 01 minimally (track scanning + basic CRUD), then move immediately to Phase 02/02.5.
+
+---
+
+# 🤖 AI Integration Summary
+
+  ## Hardware
+- AMD AI HX390 MiniPC (separate machine on local network)
+- Models: Gemma 4 26b MOE (primary), Gemma 4 e4b (fallback)
+
+## Architecture
+- AI endpoints call core services for library context
+- No AI-only data paths
+- `@ConditionalOnProperty("ai.enabled")` for toggling
+- Ollama URL configurable per environment (`application-local.yml` for your setup)
+
+## Fallback Strategy
+- If Ollama unavailable: AI endpoints use rule-based logic
+- Core API works 100% without AI
+
+## Endpoints
+- `POST /api/ai/transitions/suggest` - Smart transition suggestions
+- `POST /api/ai/setlists/analyze` - Setlist critique
+- `POST /api/ai/setlists/generate` - Natural language setlist generation
+- `POST /api/ai/sessions/insights` - Session pattern analysis
+- `POST /api/ai/analytics/narrative` - Narrative analytics report
+
+## Tech Stack Addition
+- `spring-ai-ollama-spring-boot-starter`
+- Ollama running on local network (configurable URL, e.g., `http://amd-ai-hx390:11434`)
+- `@Async` for background AI processing
+- `ollama.base-url` in `application.yml` for environment-specific configuration
+
+---
+
+# 🎵 Domain Decisions Summary
+
+| Decision | Choice |
+|----------|--------|
+| Schema | Start fresh (drop old, create new) |
+| File scanning | Recursive all folders; folder name = genre |
+| Transitions | Directed (A→B separate from B→A) |
+| Energy | Hybrid: manual with AI suggestions |
+| AI fallback | Rule-based when Ollama down |
+| Priority | Phase 02/02.5 first, fill Phase 01 minimally |

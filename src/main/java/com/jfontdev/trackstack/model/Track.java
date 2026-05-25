@@ -2,22 +2,17 @@ package com.jfontdev.trackstack.model;
 
 import jakarta.persistence.*;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDateTime;
 
 /**
- * JPA entity representing a music track.
+ * JPA entity representing a music track in the DJ library.
  * <p>
  * Tracks are the core domain object in TrackStack. Each track has metadata
- * such as title, artist, BPM, musical key, and duration. Tracks can be
- * associated with multiple {@link Tag}s and belong to multiple
- * {@link Playlist}s
- * through many-to-many relationships.
+ * extracted from audio files including BPM, musical key, genre, and file info.
+ * Tracks are associated with Transitions and Setlists in the DJ workflow.
  * <p>
  * This entity follows the static factory method pattern for creation
- * and provides an {@code update} method for encapsulated mutation,
- * keeping the entity in control of its own state transitions.
+ * and provides an {@code update} method for encapsulated mutation.
  */
 @Entity
 @Table(name = "tracks")
@@ -31,34 +26,54 @@ public class Track {
     private String artist;
     private String album;
     private Double bpm;
-    private String key; // musical key
-    private String duration;
+
+    @Column(name = "musical_key")
+    private String key; // Camelot or traditional notation
+
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     private String genre;
 
-    @ManyToMany
-    @JoinTable(name = "track_tags", joinColumns = @JoinColumn(name = "track_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
-    private Set<Tag> tags = new HashSet<>();
+    @Column(name = "file_path", nullable = false, unique = true)
+    private String filePath;
 
-    @ManyToMany(mappedBy = "tracks")
-    private Set<Playlist> playlists = new HashSet<>();
+    @Column(name = "file_format")
+    private String fileFormat; // mp3, flac, aiff, wav
+
+    private Integer bitrate; // kbps
+
+    @Column(name = "energy")
+    private Integer energy; // 1-5, manual or AI-suggested
+
+    @Column(name = "play_count")
+    private Integer playCount;
+
+    @Column(name = "last_played_date")
+    private LocalDateTime lastPlayedDate;
+
+    @Column(name = "added_date")
+    private LocalDateTime addedDate;
 
     /**
      * Parameterized constructor used by the static factory method.
-     *
-     * @param title    the track title
-     * @param artist   the track artist
-     * @param bpm      the beats per minute
-     * @param key      the musical key (e.g., "A minor")
-     * @param duration the track duration (e.g., "3:45")
-     * @param genre    the track genre (e.g., "House")
      */
-    public Track(String title, String artist, Double bpm, String key, String duration, String genre) {
+    public Track(String title, String artist, String album, Double bpm, String key,
+                 Integer durationSeconds, String genre, String filePath,
+                 String fileFormat, Integer bitrate, Integer energy) {
         this.title = title;
         this.artist = artist;
+        this.album = album;
         this.bpm = bpm;
         this.key = key;
-        this.duration = duration;
+        this.durationSeconds = durationSeconds;
         this.genre = genre;
+        this.filePath = filePath;
+        this.fileFormat = fileFormat;
+        this.bitrate = bitrate;
+        this.energy = energy;
+        this.playCount = 0;
+        this.addedDate = LocalDateTime.now();
     }
 
     /**
@@ -70,69 +85,40 @@ public class Track {
 
     /**
      * Static factory method for creating a new Track instance.
-     * <p>
-     * Controllers and services should use this method instead of calling
-     * the constructor directly, keeping entity creation centralized.
-     *
-     * @param title    the track title
-     * @param artist   the track artist
-     * @param bpm      the beats per minute
-     * @param key      the musical key
-     * @param duration the track duration
-     * @param genre    the track genre
-     * @return a new Track instance with the provided field values
      */
-    public static Track create(String title, String artist, Double bpm, String key, String duration, String genre) {
-        return new Track(title, artist, bpm, key, duration, genre);
+    public static Track create(String title, String artist, String album, Double bpm, String key,
+                               Integer durationSeconds, String genre, String filePath,
+                               String fileFormat, Integer bitrate, Integer energy) {
+        return new Track(title, artist, album, bpm, key, durationSeconds, genre,
+                filePath, fileFormat, bitrate, energy);
     }
 
     /**
-     * Updates all mutable fields of this track.
-     * <p>
-     * This method encapsulates mutation in a single operation, mirroring
-     * the factory method pattern used for creation. The service layer calls
-     * this method for both full (PUT) and partial (PATCH) updates -- for PATCH,
-     * the service merges non-null fields from the request with existing values
-     * before calling this method.
-     *
-     * @param title    the new track title
-     * @param artist   the new track artist
-     * @param bpm      the new beats per minute
-     * @param key      the new musical key
-     * @param duration the new track duration
-     * @param genre    the new track genre
+     * Updates mutable fields of this track.
      */
-    public void update(String title, String artist, Double bpm, String key, String duration, String genre) {
+    public void update(String title, String artist, String album, Double bpm, String key,
+                       Integer durationSeconds, String genre, String filePath,
+                       String fileFormat, Integer bitrate, Integer energy) {
         this.title = title;
         this.artist = artist;
+        this.album = album;
         this.bpm = bpm;
         this.key = key;
-        this.duration = duration;
+        this.durationSeconds = durationSeconds;
         this.genre = genre;
+        this.filePath = filePath;
+        this.fileFormat = fileFormat;
+        this.bitrate = bitrate;
+        this.energy = energy;
     }
 
     /**
-     * Adds a tag to this track's tag set.
-     * <p>
-     * This manages the owning side of the Track-Tag many-to-many relationship.
-     * The join table {@code track_tags} is updated when this track is persisted.
-     *
-     * @param tag the tag to associate with this track
+     * Records that this track was played, incrementing play count
+     * and updating last played date.
      */
-    public void addTag(Tag tag) {
-        this.tags.add(tag);
-    }
-
-    /**
-     * Removes a tag from this track's tag set.
-     * <p>
-     * This manages the owning side of the Track-Tag many-to-many relationship.
-     * The corresponding join table row is removed when this track is persisted.
-     *
-     * @param tag the tag to disassociate from this track
-     */
-    public void removeTag(Tag tag) {
-        this.tags.remove(tag);
+    public void recordPlay() {
+        this.playCount++;
+        this.lastPlayedDate = LocalDateTime.now();
     }
 
     public Long getId() {
@@ -159,23 +145,39 @@ public class Track {
         return key;
     }
 
-    public String getDuration() {
-        return duration;
+    public Integer getDurationSeconds() {
+        return durationSeconds;
     }
 
     public String getGenre() {
         return genre;
     }
 
-    /**
-     * Returns an unmodifiable view of the tags associated with this track.
-     * <p>
-     * To modify the tags, use {@link #addTag(Tag)} or {@link #removeTag(Tag)}
-     * to maintain domain encapsulation.
-     *
-     * @return an unmodifiable set of tags associated with this track
-     */
-    public Set<Tag> getTags() {
-        return Collections.unmodifiableSet(tags);
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public String getFileFormat() {
+        return fileFormat;
+    }
+
+    public Integer getBitrate() {
+        return bitrate;
+    }
+
+    public Integer getEnergy() {
+        return energy;
+    }
+
+    public Integer getPlayCount() {
+        return playCount;
+    }
+
+    public LocalDateTime getLastPlayedDate() {
+        return lastPlayedDate;
+    }
+
+    public LocalDateTime getAddedDate() {
+        return addedDate;
     }
 }

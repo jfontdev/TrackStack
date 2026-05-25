@@ -13,4 +13,12 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
  * </p>
  */
 public interface TrackRepository extends JpaRepository<Track, Long>, JpaSpecificationExecutor<Track> {
+
+    /**
+     * Checks if a track exists with the given file path.
+     *
+     * @param filePath the file path to check
+     * @return true if a track with this file path exists
+     */
+    boolean existsByFilePath(String filePath);
 }

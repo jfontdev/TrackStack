@@ -14,10 +14,11 @@ import org.springframework.web.bind.annotation.*;
 /**
  * REST controller for managing tracks.
  * <p>
- * Provides endpoints for full CRUD operations on tracks, as well as
- * tag relationship management. This controller delegates all business
- * logic to the {@link TrackService} and only handles HTTP concerns
- * (request binding, status codes, response formatting).
+ * Provides endpoints for full CRUD operations on tracks, audio library
+ * scanning, and track discovery with filtering and pagination.
+ * This controller delegates all business logic to the {@link TrackService}
+ * and only handles HTTP concerns (request binding, status codes,
+ * response formatting).
  */
 @RestController
 @RequestMapping("/api/tracks")
@@ -88,6 +89,18 @@ public class TrackController {
     }
 
     /**
+     * Scans the configured music directory and imports any new audio files
+     * into the track library.
+     *
+     * @return 200 OK with the number of tracks imported
+     */
+    @PostMapping("/scan")
+    public ResponseEntity<Integer> scanLibrary() {
+        int importedCount = trackService.scanLibrary();
+        return ResponseEntity.ok(importedCount);
+    }
+
+    /**
      * Fully updates an existing track (PUT semantics).
      * <p>
      * All fields in the request body replace the existing values.
@@ -117,9 +130,6 @@ public class TrackController {
 
     /**
      * Deletes a track by its ID.
-     * <p>
-     * Also removes all tag associations and playlist memberships for this track
-     * (handled by ON DELETE CASCADE at the database level).
      *
      * @param id the track's unique identifier
      * @return 204 No Content on success, or 404 if not found
@@ -128,31 +138,5 @@ public class TrackController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         trackService.deleteTrack(id);
         return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * Associates a tag with a track.
-     *
-     * @param id    the track's unique identifier
-     * @param tagId the tag's unique identifier
-     * @return 200 OK with the updated track (including the new tag), or 404 if
-     *         either the track or tag is not found
-     */
-    @PutMapping("/{id}/tags/{tagId}")
-    public TrackResponseDTO addTag(@PathVariable Long id, @PathVariable Long tagId) {
-        return trackService.addTagToTrack(id, tagId);
-    }
-
-    /**
-     * Removes a tag association from a track.
-     *
-     * @param id    the track's unique identifier
-     * @param tagId the tag's unique identifier
-     * @return 200 OK with the updated track (without the removed tag), or 404 if
-     *         either the track or tag is not found
-     */
-    @DeleteMapping("/{id}/tags/{tagId}")
-    public TrackResponseDTO removeTag(@PathVariable Long id, @PathVariable Long tagId) {
-        return trackService.removeTagFromTrack(id, tagId);
     }
 }
