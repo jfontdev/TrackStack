@@ -2,6 +2,7 @@ package com.jfontdev.trackstack;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.TestPropertySource;
 
 import java.util.Map;
 
@@ -18,6 +19,10 @@ import static org.hamcrest.Matchers.*;
  * Tests that require an actual Ollama instance should be run locally with
  * the AI service enabled.
  */
+@TestPropertySource(properties = {
+        "spring.ai.ollama.timeout=2s",
+        "spring.ai.ollama.chat.options.model=llama3.2"
+})
 public class AIControllerIntegrationTest extends BaseIntegrationTest {
 
     private Long createTrack(String title, String artist, String genre, String key, Double bpm, Integer energy) {
@@ -79,6 +84,8 @@ public class AIControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(200)
                 .body("trackId", equalTo(sourceId.intValue()))
+                .body("sourceTitle", equalTo("Source Track"))
+                .body("sourceArtist", equalTo("Artist A"))
                 .body("suggestions", notNullValue())
                 .body("suggestions.size()", greaterThan(0))
                 .body("source", equalTo("RULE_BASED")); // Should fallback
