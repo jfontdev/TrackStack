@@ -69,6 +69,7 @@ public class CacheConfig {
                 PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
                                 .allowIfSubType("java.lang.")
                                 .allowIfSubType("java.util.")
+                                .allowIfSubType("java.time.")
                                 .allowIfSubType("org.springframework.data.domain.")
                                 .allowIfSubType("com.jfontdev.trackstack.dto.")
                                 .build();
