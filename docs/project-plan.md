@@ -55,7 +55,7 @@ Status: ✅ Completed (metadata, architecture docs)
 
 ---
 
-## 🔜 Phase 01 – Smart Track Library (Minimal)
+## ✅ Phase 01 – Smart Track Library (Minimal)
 
 **Goal:** Auto-populate from your real music files quickly, then move on.
 
@@ -77,9 +77,11 @@ Status: ✅ Completed (metadata, architecture docs)
 
 **Duration:** 1-2 weeks (minimal viable, don't over-engineer)
 
+**Status:** ✅ Completed. Merged in PR #1 (feat/00-Project-Reset).
+
 ---
 
-## 🔜 Phase 02 – Transition Graph (Priority)
+## ✅ Phase 02 – Transition Graph (Priority) [COMPLETE]
 
 **Goal:** Replace `mezclas.md` with a queryable, intelligent transition database.
 
@@ -99,8 +101,14 @@ Status: ✅ Completed (metadata, architecture docs)
 - `GET /api/transitions/from/{trackId}`
 - `GET /api/transitions/to/{trackId}`
 - `GET /api/transitions/best?trackId=123&limit=5`
+- `PUT /api/transitions/{id}`
+- `PATCH /api/transitions/{id}`
+- `DELETE /api/transitions/{id}`
+- `POST /api/transitions/{id}/record-play`
 
 **Duration:** 2 weeks
+
+**Status:** ✅ Complete. All CRUD endpoints working with Camelot wheel key compatibility.
 
 ---
 
