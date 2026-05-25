@@ -1,6 +1,5 @@
 package com.jfontdev.trackstack.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jfontdev.trackstack.dto.ai.AISuggestionRequestDTO;
 import com.jfontdev.trackstack.dto.ai.AISuggestionResponseDTO;
@@ -21,7 +20,6 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -34,10 +32,11 @@ import java.util.Optional;
  * <p>
  * The service constructs a detailed prompt including:
  * <ul>
- *   <li>The current track's full metadata (title, artist, BPM, key, genre, energy)</li>
- *   <li>Up to 50 candidate tracks from the library for context</li>
- *   <li>The user's recent transition history with ratings</li>
- *   <li>The desired vibe/mood description</li>
+ * <li>The current track's full metadata (title, artist, BPM, key, genre,
+ * energy)</li>
+ * <li>Up to 50 candidate tracks from the library for context</li>
+ * <li>The user's recent transition history with ratings</li>
+ * <li>The desired vibe/mood description</li>
  * </ul>
  * <p>
  * The prompt instructs the AI to return a structured JSON response with
@@ -45,13 +44,14 @@ import java.util.Optional;
  * <p>
  * <b>Fallback Strategy:</b>
  * <p>
- * If the Ollama service is unavailable (network issues, model not loaded, etc.),
+ * If the Ollama service is unavailable (network issues, model not loaded,
+ * etc.),
  * the service automatically falls back to rule-based suggestions using:
  * <ul>
- *   <li>Existing transitions with high ratings from the current track</li>
- *   <li>Tracks with harmonically compatible keys (Camelot wheel)</li>
- *   <li>Tracks with similar BPM (±5 BPM range)</li>
- *   <li>Energy level matching</li>
+ * <li>Existing transitions with high ratings from the current track</li>
+ * <li>Tracks with harmonically compatible keys (Camelot wheel)</li>
+ * <li>Tracks with similar BPM (±5 BPM range)</li>
+ * <li>Energy level matching</li>
  * </ul>
  * <p>
  * The fallback ensures the API is always functional even without AI.
@@ -147,9 +147,9 @@ public class AISuggestionServiceImpl implements AISuggestionService {
      * <p>
      * Uses a combination of strategies:
      * <ol>
-     *   <li>Best-rated existing transitions from the source track</li>
-     *   <li>Tracks with compatible keys and similar BPM</li>
-     *   <li>Energy level matching</li>
+     * <li>Best-rated existing transitions from the source track</li>
+     * <li>Tracks with compatible keys and similar BPM</li>
+     * <li>Energy level matching</li>
      * </ol>
      *
      * @param sourceTrack the current track being played
@@ -165,7 +165,8 @@ public class AISuggestionServiceImpl implements AISuggestionService {
                 .findBySourceTrackIdOrderByRatingDesc(sourceTrack.getId());
 
         for (Transition transition : existingTransitions) {
-            if (suggestions.size() >= limit) break;
+            if (suggestions.size() >= limit)
+                break;
 
             Optional<Track> targetTrack = trackRepository.findById(transition.getTargetTrackId());
             if (targetTrack.isPresent()) {
@@ -193,8 +194,10 @@ public class AISuggestionServiceImpl implements AISuggestionService {
 
             List<Track> candidates = trackRepository.findAll();
             for (Track candidate : candidates) {
-                if (suggestions.size() >= limit) break;
-                if (excludedIds.contains(candidate.getId())) continue;
+                if (suggestions.size() >= limit)
+                    break;
+                if (excludedIds.contains(candidate.getId()))
+                    continue;
 
                 // Check key compatibility
                 boolean keyCompatible = isKeyCompatible(sourceTrack.getKey(), candidate.getKey());
@@ -254,7 +257,8 @@ public class AISuggestionServiceImpl implements AISuggestionService {
             prompt.append("Your previous transitions from this track:\n");
             int count = 0;
             for (Transition t : recentTransitions) {
-                if (count++ >= 5) break; // Limit history to top 5
+                if (count++ >= 5)
+                    break; // Limit history to top 5
                 Optional<Track> target = trackRepository.findById(t.getTargetTrackId());
                 if (target.isPresent()) {
                     prompt.append("  - ").append(target.get().getTitle())
@@ -273,8 +277,10 @@ public class AISuggestionServiceImpl implements AISuggestionService {
         prompt.append("Available tracks in your library (").append(library.size()).append(" total):\n");
         int contextCount = 0;
         for (Track track : library) {
-            if (contextCount >= MAX_LIBRARY_CONTEXT) break;
-            if (track.getId().equals(sourceTrack.getId())) continue;
+            if (contextCount >= MAX_LIBRARY_CONTEXT)
+                break;
+            if (track.getId().equals(sourceTrack.getId()))
+                continue;
             prompt.append(formatTrackForPrompt(track));
             prompt.append("\n");
             contextCount++;
@@ -317,10 +323,14 @@ public class AISuggestionServiceImpl implements AISuggestionService {
         sb.append("Track ID: ").append(track.getId());
         sb.append(", Title: \"").append(track.getTitle()).append("\"");
         sb.append(", Artist: \"").append(track.getArtist()).append("\"");
-        if (track.getBpm() != null) sb.append(", BPM: ").append(track.getBpm());
-        if (track.getKey() != null) sb.append(", Key: ").append(track.getKey());
-        if (track.getGenre() != null) sb.append(", Genre: ").append(track.getGenre());
-        if (track.getEnergy() != null) sb.append(", Energy: ").append(track.getEnergy()).append("/5");
+        if (track.getBpm() != null)
+            sb.append(", BPM: ").append(track.getBpm());
+        if (track.getKey() != null)
+            sb.append(", Key: ").append(track.getKey());
+        if (track.getGenre() != null)
+            sb.append(", Genre: ").append(track.getGenre());
+        if (track.getEnergy() != null)
+            sb.append(", Energy: ").append(track.getEnergy()).append("/5");
         return sb.toString();
     }
 
@@ -396,10 +406,12 @@ public class AISuggestionServiceImpl implements AISuggestionService {
      * @return true if compatible
      */
     private boolean isKeyCompatible(String key1, String key2) {
-        if (key1 == null || key2 == null) return false;
+        if (key1 == null || key2 == null)
+            return false;
         String k1 = key1.trim().toUpperCase();
         String k2 = key2.trim().toUpperCase();
-        if (k1.equals(k2)) return true;
+        if (k1.equals(k2))
+            return true;
 
         // Simple Camelot check for adjacent numbers
         if (k1.length() >= 2 && k2.length() >= 2) {
@@ -427,23 +439,26 @@ public class AISuggestionServiceImpl implements AISuggestionService {
      * @return true if within ±5 BPM
      */
     private boolean isBpmCompatible(Double bpm1, Double bpm2) {
-        if (bpm1 == null || bpm2 == null) return false;
+        if (bpm1 == null || bpm2 == null)
+            return false;
         return Math.abs(bpm1 - bpm2) <= 5.0;
     }
 
     /**
      * Builds a human-readable reason for rule-based fallback suggestions.
      *
-     * @param source     the source track
-     * @param candidate  the suggested track
-     * @param keyCompat  whether keys are compatible
-     * @param bpmCompat  whether BPMs are compatible
+     * @param source    the source track
+     * @param candidate the suggested track
+     * @param keyCompat whether keys are compatible
+     * @param bpmCompat whether BPMs are compatible
      * @return reason string
      */
     private String buildFallbackReason(Track source, Track candidate, boolean keyCompat, boolean bpmCompat) {
         List<String> reasons = new ArrayList<>();
-        if (keyCompat) reasons.add("compatible key (" + source.getKey() + " → " + candidate.getKey() + ")");
-        if (bpmCompat) reasons.add("similar BPM (" + source.getBpm() + " → " + candidate.getBpm() + ")");
+        if (keyCompat)
+            reasons.add("compatible key (" + source.getKey() + " → " + candidate.getKey() + ")");
+        if (bpmCompat)
+            reasons.add("similar BPM (" + source.getBpm() + " → " + candidate.getBpm() + ")");
         if (source.getGenre() != null && source.getGenre().equals(candidate.getGenre())) {
             reasons.add("same genre (" + candidate.getGenre() + ")");
         }
