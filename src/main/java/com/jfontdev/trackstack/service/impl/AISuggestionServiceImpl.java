@@ -137,6 +137,8 @@ public class AISuggestionServiceImpl implements AISuggestionService {
 
         return new AISuggestionResponseDTO(
                 sourceTrack.getId(),
+                sourceTrack.getTitle(),
+                sourceTrack.getArtist(),
                 suggestions,
                 "AI-powered suggestions based on track analysis",
                 SOURCE_AI);
@@ -222,6 +224,8 @@ public class AISuggestionServiceImpl implements AISuggestionService {
 
         return new AISuggestionResponseDTO(
                 sourceTrack.getId(),
+                sourceTrack.getTitle(),
+                sourceTrack.getArtist(),
                 suggestions,
                 "Rule-based suggestions (AI service unavailable)",
                 SOURCE_RULE_BASED);
