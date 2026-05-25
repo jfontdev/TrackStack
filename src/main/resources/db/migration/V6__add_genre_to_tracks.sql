@@ -1,4 +1,5 @@
-- == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == -- V6: Add genre column to tracks.
+-- ============================================================
+-- V6: Add genre column to tracks.
 --
 -- Why: Phase 07 introduces server-side filtering by genre.
 -- A dedicated column keeps filtering simple and query-efficient
