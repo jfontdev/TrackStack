@@ -112,14 +112,14 @@ Status: ✅ Completed (metadata, architecture docs)
 
 ---
 
-## 🔜 Phase 02.5 – AI Transition Suggestions (Priority)
+## ✅ Phase 02.5 – AI Transition Suggestions (Priority) [COMPLETE]
 
 **Goal:** Smart transition suggestions via Ollama (Gemma 4 26b MOE).
 
 **Decision:** Priority feature. Implement alongside Phase 02.
 
 **Setup:**
-- `spring-ai-ollama-spring-boot-starter`
+- `spring-ai-starter-model-ollama` (Spring AI 1.0.0)
 - Local network endpoint: configurable (e.g., `http://amd-ai-hx390:11434`)
 - Model: `gemma4:26b` (primary), fallback to rule-based
 
@@ -135,15 +135,19 @@ Status: ✅ Completed (metadata, architecture docs)
 - Request structured JSON response
 - Parse and return DTO
 
-**Tech:** Spring AI Ollama, `@Async` for non-blocking AI calls
+**Tech:** Spring AI Ollama, `ChatModel` API, structured JSON parsing
+
+**Status:** ✅ Complete. AI suggestions with automatic rule-based fallback.
 
 **Duration:** 1-2 weeks (parallel with Phase 02)
 
 ---
 
-## 🔜 Phase 03 – Set Planning
+## 🔜 Phase 03 – Set Planning + RedisJSON Cache Refactor
 
-**Goal:** Build setlists with intelligence.
+**Goal:** Build setlists with intelligence AND migrate Redis caching to RedisJSON.
+
+### Part A: Set Planning
 
 - Setlist Builder: ordered slots with track sequence
 - Energy arc per slot (1-5): Opening → Build → Peak → Cooldown
@@ -157,6 +161,25 @@ Status: ✅ Completed (metadata, architecture docs)
 - `PUT /api/setlists/{id}/slots/reorder`
 - `GET /api/setlists/{id}/energy-arc`
 - `POST /api/setlists/{id}/export`
+
+### Part B: RedisJSON Cache Refactor
+
+**Goal:** Replace GenericJackson2JsonRedisSerializer with native RedisJSON.
+
+**Why:**
+- Current approach stores JSON as strings with `@class` type annotations (workaround)
+- RedisJSON stores actual JSON objects with native JSONPath querying
+- Aligns with work experience (Azure Redis with RedisJSON addon)
+- Cleaner serialization without Jackson polymorphic type hacks
+
+**Implementation:**
+- Switch Docker Compose to `redis/redis-stack:latest` (includes RedisJSON)
+- Replace `GenericJackson2JsonRedisSerializer` with RedisJSON client (jredisjson or Lettuce JSON commands)
+- Update `CacheConfig` to use `JSON.SET` / `JSON.GET` instead of string serialization
+- Enable JSONPath queries (e.g., `$.tracks[?(@.bpm > 130)]` from cache)
+- Remove `PolymorphicTypeValidator` complexity (no longer needed)
+
+**Tech:** RedisJSON module, `redis/redis-stack` Docker image, JSONPath
 
 **AI Enhancement (Phase 03.5):**
 - `POST /api/ai/setlists/analyze` - AI critiques energy arc and flow
