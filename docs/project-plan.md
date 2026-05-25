@@ -112,14 +112,14 @@ Status: ✅ Completed (metadata, architecture docs)
 
 ---
 
-## 🔜 Phase 02.5 – AI Transition Suggestions (Priority)
+## ✅ Phase 02.5 – AI Transition Suggestions (Priority) [COMPLETE]
 
 **Goal:** Smart transition suggestions via Ollama (Gemma 4 26b MOE).
 
 **Decision:** Priority feature. Implement alongside Phase 02.
 
 **Setup:**
-- `spring-ai-ollama-spring-boot-starter`
+- `spring-ai-starter-model-ollama` (Spring AI 1.0.0)
 - Local network endpoint: configurable (e.g., `http://amd-ai-hx390:11434`)
 - Model: `gemma4:26b` (primary), fallback to rule-based
 
@@ -135,7 +135,9 @@ Status: ✅ Completed (metadata, architecture docs)
 - Request structured JSON response
 - Parse and return DTO
 
-**Tech:** Spring AI Ollama, `@Async` for non-blocking AI calls
+**Tech:** Spring AI Ollama, `ChatModel` API, structured JSON parsing
+
+**Status:** ✅ Complete. AI suggestions with automatic rule-based fallback.
 
 **Duration:** 1-2 weeks (parallel with Phase 02)
 
