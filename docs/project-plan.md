@@ -143,24 +143,36 @@ Status: ✅ Completed (metadata, architecture docs)
 
 ---
 
-## 🔜 Phase 03 – Set Planning + RedisJSON Cache Refactor
+## ✅ Phase 03 – Set Planning + RedisJSON Cache Refactor
 
 **Goal:** Build setlists with intelligence AND migrate Redis caching to RedisJSON.
+
+**Status:** Part A (Set Planning) COMPLETE. Part B (RedisJSON refactor) pending.
 
 ### Part A: Set Planning
 
 - Setlist Builder: ordered slots with track sequence
-- Energy arc per slot (1-5): Opening → Build → Peak → Cooldown
 - Setlist status: DRAFT → READY → PERFORMED
-- Track-to-track transition validation
-- Setlist export (text/JSON for XDJ-AZ)
-- Preparation time tracking
+- Slot CRUD, reordering
+- Preparation time tracking (entity field, logic in Phase 04)
 
-**Endpoints:**
+**Endpoints (COMPLETED):**
 - `POST /api/setlists` (create with slots)
+- `GET /api/setlists` (all, filter by status)
+- `GET /api/setlists/{id}`
+- `PUT /api/setlists/{id}`
+- `DELETE /api/setlists/{id}`
+- `POST /api/setlists/{id}/slots`
+- `PUT /api/setlists/{id}/slots/{slotId}`
+- `DELETE /api/setlists/{id}/slots/{slotId}`
 - `PUT /api/setlists/{id}/slots/reorder`
-- `GET /api/setlists/{id}/energy-arc`
-- `POST /api/setlists/{id}/export`
+- `POST /api/setlists/{id}/ready`
+- `POST /api/setlists/{id}/performed`
+
+**MOVED to Phase 03.5 / 04:**
+- `GET /api/setlists/{id}/energy-arc` — energy progression visualization
+- Track-to-track transition validation within setlist
+- `POST /api/setlists/{id}/export` — text/JSON export for XDJ-AZ
 
 ### Part B: RedisJSON Cache Refactor
 
@@ -313,9 +325,14 @@ The project will be considered "enterprise-ready" when:
 
 # 📌 Current Phase
 
-👉 Phase 02 – Transition Graph (Priority)
+👉 Phase 03 Part B – RedisJSON Cache Refactor
 
-**Next immediate action:** Implement Phase 01 minimally (track scanning + basic CRUD), then move immediately to Phase 02/02.5.
+**Part A COMPLETED:**
+- Setlist entities, repositories, service, controller
+- Slot CRUD, reordering, lifecycle transitions
+- Integration tests (14 tests, all passing)
+
+**Next immediate action:** Switch Docker Compose to redis/redis-stack and implement native RedisJSON caching.
 
 ---
 
