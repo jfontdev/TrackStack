@@ -92,6 +92,19 @@ Controllers must never instantiate entities directly.
 - Constructor injection only.
 - No field injection.
 - No Lombok (unless explicitly added later).
+- **Blank lines around control flow:** Always leave a blank line before `if`, `for`, and `return` statements when they follow other statements. This improves readability by visually separating control flow from assignment logic.
+
+  ```java
+  String json = stringRedisTemplate.opsForValue().get(key);
+
+  if (json == null || json.isBlank()) {
+      continue;
+  }
+
+  JsonNode root = objectMapper.readTree(json);
+
+  return root.path("payload");
+  ```
 
 ---
 
