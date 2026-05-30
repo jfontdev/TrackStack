@@ -36,6 +36,7 @@ public class RedisJSONCacheIntegrationTest extends BaseIntegrationTest {
         Map<String, Object> payload = new java.util.HashMap<>(Map.of(
                 "title", title,
                 "filePath", "/music/test/" + title.toLowerCase().replace(" ", "-") + ".mp3"));
+
         if (bpm != null) {
             payload.put("bpm", bpm);
         }

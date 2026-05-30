@@ -21,9 +21,9 @@ import java.util.Set;
  * {@link com.jfontdev.trackstack.config.RedisJSONSerializer} envelope).
  * This service provides a client-side JSONPath engine that:
  * <ul>
- *   <li>Scans cache keys matching a pattern</li>
- *   <li>Parses the JSON envelope to extract the {@code payload}</li>
- *   <li>Filters the payload using simple JSONPath predicates</li>
+ * <li>Scans cache keys matching a pattern</li>
+ * <li>Parses the JSON envelope to extract the {@code payload}</li>
+ * <li>Filters the payload using simple JSONPath predicates</li>
  * </ul>
  * <p>
  * <b>Why client-side instead of server-side JSONPath?</b>
@@ -37,6 +37,7 @@ import java.util.Set;
  * implemented.
  * <p>
  * <b>Example usage:</b>
+ * 
  * <pre>{@code
  * List<TrackResponseDTO> fastTracks = redisJSONService.queryCache(
  *         "tracks::*",
@@ -69,27 +70,29 @@ public class RedisJSONService {
      * <p>
      * Steps:
      * <ol>
-     *   <li>Scan Redis for keys matching {@code keyPattern}.</li>
-     *   <li>For each key, read the cached JSON envelope.</li>
-     *   <li>Extract the {@code payload} field from the envelope.</li>
-     *   <li>Navigate to the field specified by {@code jsonPath} within the payload.</li>
-     *   <li>Apply the type check and value predicate.</li>
-     *   <li>Deserialize matching payloads into {@code targetType}.</li>
+     * <li>Scan Redis for keys matching {@code keyPattern}.</li>
+     * <li>For each key, read the cached JSON envelope.</li>
+     * <li>Extract the {@code payload} field from the envelope.</li>
+     * <li>Navigate to the field specified by {@code jsonPath} within the
+     * payload.</li>
+     * <li>Apply the type check and value predicate.</li>
+     * <li>Deserialize matching payloads into {@code targetType}.</li>
      * </ol>
      *
-     * @param keyPattern    Redis key pattern (e.g., {@code "tracks::*"})
-     * @param jsonPath      JSONPath expression pointing to the field to filter on
-     *                      (e.g., {@code "$.payload.bpm"})
-     * @param typeCheck     a check that the JSON node at the path is of the expected type
+     * @param keyPattern     Redis key pattern (e.g., {@code "tracks::*"})
+     * @param jsonPath       JSONPath expression pointing to the field to filter on
+     *                       (e.g., {@code "$.payload.bpm"})
+     * @param typeCheck      a check that the JSON node at the path is of the
+     *                       expected type
      * @param valuePredicate the filter condition applied to the JSON node value
-     * @param targetType    the Java class to deserialize matching payloads into
-     * @param <T>           the type of the returned objects
+     * @param targetType     the Java class to deserialize matching payloads into
+     * @param <T>            the type of the returned objects
      * @return list of deserialized objects whose payload matched the predicate
      */
     public <T> List<T> queryCache(String keyPattern, String jsonPath,
-                                   JsonNodeTypeCheck typeCheck,
-                                   JsonNodePredicate valuePredicate,
-                                   Class<T> targetType) {
+            JsonNodeTypeCheck typeCheck,
+            JsonNodePredicate valuePredicate,
+            Class<T> targetType) {
         log.debug("Querying cache with pattern: {}, jsonPath: {}", keyPattern, jsonPath);
 
         Set<String> keys = stringRedisTemplate.keys(keyPattern);
@@ -100,6 +103,7 @@ public class RedisJSONService {
         List<T> results = new ArrayList<>();
         for (String key : keys) {
             String json = stringRedisTemplate.opsForValue().get(key);
+
             if (json == null || json.isBlank()) {
                 continue;
             }
@@ -107,11 +111,13 @@ public class RedisJSONService {
             try {
                 JsonNode root = objectMapper.readTree(json);
                 JsonNode payload = root.path("payload");
+
                 if (payload.isMissingNode()) {
                     continue;
                 }
 
                 JsonNode valueNode = navigateJsonPath(payload, jsonPath);
+
                 if (valueNode == null || valueNode.isMissingNode()) {
                     continue;
                 }
@@ -126,6 +132,7 @@ public class RedisJSONService {
         }
 
         log.debug("Query returned {} results", results.size());
+
         return results;
     }
 
@@ -159,7 +166,7 @@ public class RedisJSONService {
      * Supports simple dot-notation paths like {@code "$.bpm"} or
      * {@code "$.payload.energy"}. Array indexing is not supported.
      *
-     * @param root    the root JSON node to navigate from
+     * @param root     the root JSON node to navigate from
      * @param jsonPath the JSONPath expression (must start with {@code $})
      * @return the node at the given path, or a missing node if not found
      */
@@ -169,12 +176,14 @@ public class RedisJSONService {
         }
 
         String path = jsonPath.substring(1); // Remove leading $
+
         if (path.isEmpty() || path.equals(".")) {
             return root;
         }
 
         JsonNode current = root;
         String[] segments = path.split("\\.");
+
         for (String segment : segments) {
             if (segment.isEmpty()) {
                 continue;
@@ -184,6 +193,7 @@ public class RedisJSONService {
                 return current;
             }
         }
+
         return current;
     }
 

@@ -86,6 +86,7 @@ public class RedisJSONSerializer implements RedisSerializer<Object> {
             envelope.put(PAYLOAD_FIELD, object);
 
             String json = objectMapper.writeValueAsString(envelope);
+
             return json.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new SerializationException("Failed to serialize object of type "
@@ -115,11 +116,13 @@ public class RedisJSONSerializer implements RedisSerializer<Object> {
                     objectMapper.getTypeFactory().constructMapType(HashMap.class, String.class, Object.class));
 
             String typeName = (String) envelope.get(TYPE_FIELD);
+
             if (typeName == null) {
                 throw new SerializationException("JSON envelope missing '" + TYPE_FIELD + "' field");
             }
 
             Class<?> targetClass = typeRegistry.get(typeName);
+
             if (targetClass == null) {
                 throw new SerializationException("Unknown type name in envelope: " + typeName
                         + ". Registered types: " + typeRegistry.keySet());
@@ -129,6 +132,7 @@ public class RedisJSONSerializer implements RedisSerializer<Object> {
             // Re-serialize payload to JSON then deserialize into target type
             // This is more reliable than casting a LinkedHashMap
             String payloadJson = objectMapper.writeValueAsString(payload);
+
             return objectMapper.readValue(payloadJson, targetClass);
         } catch (IOException e) {
             throw new SerializationException("Failed to deserialize JSON envelope", e);
