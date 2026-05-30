@@ -1,6 +1,6 @@
 services:
   redis:
-    image: redis:8.0.5-alpine
+    image: redis/redis-stack:latest
     container_name: trackstack-redis
     ports:
       - "6379:6379"
