@@ -1,1 +1,1 @@
-TRUNCATE TABLE tracks RESTART IDENTITY CASCADE;
+TRUNCATE TABLE setlist_slots, setlists, transitions, tracks RESTART IDENTITY CASCADE;
