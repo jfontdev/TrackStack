@@ -9,6 +9,7 @@ import com.jfontdev.trackstack.model.Track;
 import com.jfontdev.trackstack.model.Transition;
 import com.jfontdev.trackstack.repository.TrackRepository;
 import com.jfontdev.trackstack.repository.TransitionRepository;
+import com.jfontdev.trackstack.service.TransitionCompatibilityEngine;
 import com.jfontdev.trackstack.service.TransitionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,13 +29,9 @@ import java.util.Optional;
  * <p>
  * When a transition is created, this service looks up the source and target
  * tracks and calculates whether their musical keys are harmonically compatible
- * according to the Camelot wheel:
- * <ul>
- *   <li>Same key → compatible</li>
- *   <li>Adjacent numbers, same letter (e.g., 4A ↔ 5A) → compatible</li>
- *   <li>Same letter, number ±7 (e.g., 4A ↔ 11A) → compatible (relative minor/major)</li>
- *   <li>Everything else → not compatible</li>
- * </ul>
+ * according to the Camelot wheel. The actual calculation logic is delegated to
+ * {@link TransitionCompatibilityEngine} so that other services (e.g. setlist
+ * validation) can reuse the same rules.
  * <p>
  * BPM difference is calculated as the absolute difference between the two tracks'
  * BPM values.
@@ -50,11 +47,14 @@ public class TransitionServiceImpl implements TransitionService {
 
     private final TransitionRepository transitionRepository;
     private final TrackRepository trackRepository;
+    private final TransitionCompatibilityEngine compatibilityEngine;
 
     public TransitionServiceImpl(TransitionRepository transitionRepository,
-                                 TrackRepository trackRepository) {
+                                 TrackRepository trackRepository,
+                                 TransitionCompatibilityEngine compatibilityEngine) {
         this.transitionRepository = transitionRepository;
         this.trackRepository = trackRepository;
+        this.compatibilityEngine = compatibilityEngine;
     }
 
     /**
@@ -375,208 +375,25 @@ public class TransitionServiceImpl implements TransitionService {
      * Calculates harmonic key compatibility and BPM difference between two tracks
      * and sets them on the transition entity.
      * <p>
-     * This method is called during transition creation to populate the
-     * auto-calculated fields. It requires both Track entities because it needs
-     * access to their key and BPM values.
-     * <p>
-     * <b>Note:</b> This method mutates the passed {@code transition} object.
-     * It does not return a value; the side effect is the updated entity.
+     * Delegates the actual calculation to {@link TransitionCompatibilityEngine}
+     * so that the same rules can be reused by setlist validation and other
+     * features without duplicating the logic.
      *
      * @param transition  the transition entity to populate with compatibility data
      * @param sourceTrack the track being played first (provides source key/BPM)
      * @param targetTrack the track being transitioned into (provides target key/BPM)
      */
     private void calculateCompatibility(Transition transition, Track sourceTrack, Track targetTrack) {
-        // Calculate BPM difference as an absolute value.
-        // A large BPM difference (e.g., 30 BPM) indicates a challenging transition
-        // that may require techniques like tempo ramping or abrupt cuts.
-        Double bpmDiff = calculateBpmDifference(sourceTrack.getBpm(), targetTrack.getBpm());
+        Double bpmDiff = compatibilityEngine.calculateBpmDifference(
+                sourceTrack.getBpm(), targetTrack.getBpm());
         transition.setBpmDifference(bpmDiff);
 
-        // Calculate key compatibility using Camelot wheel rules.
-        // Harmonic mixing is a core DJ technique — compatible keys blend smoothly
-        // while incompatible keys may create dissonance.
-        Boolean keyCompat = calculateKeyCompatibility(sourceTrack.getKey(), targetTrack.getKey());
+        Boolean keyCompat = compatibilityEngine.calculateKeyCompatibility(
+                sourceTrack.getKey(), targetTrack.getKey());
         transition.setCompatibleKeys(keyCompat);
 
         log.debug("Compatibility calculated for transition {} -> {}: keys={}, bpmDiff={}",
                 sourceTrack.getId(), targetTrack.getId(), keyCompat, bpmDiff);
-    }
-
-    /**
-     * Calculates whether two musical keys are harmonically compatible.
-     * <p>
-     * Uses the Camelot wheel system, which is the de-facto standard for
-     * harmonic mixing in DJing. The wheel organizes all 24 major and minor
-     * keys into a circular arrangement where adjacent positions are compatible.
-     * <p>
-     * <b>Compatibility rules:</b>
-     * <ul>
-     *   <li><b>Exact match:</b> Same key (e.g., 4A and 4A) → compatible</li>
-     *   <li><b>Adjacent on wheel:</b> Same letter, adjacent number (e.g., 4A and 5A) → compatible.
-     *       This is a one-step move on the Camelot wheel.</li>
-     *   <li><b>Relative major/minor:</b> Same letter, number ±7 (e.g., 4A and 11A) → compatible.
-     *       4A is F minor, 11A is F# minor? No, actually in Camelot:
-     *       The wheel wraps around, so 12 connects back to 1. The ±7 rule
-     *       identifies keys that share the same letter but are on opposite
-     *       sides of the wheel (a diagonal move).</li>
-     *   <li><b>Different letters or non-adjacent numbers:</b> Not compatible</li>
-     * </ul>
-     * <p>
-     * Keys that are not in Camelot notation (e.g., traditional "F# minor") are
-     * only considered compatible if they are an exact string match after normalization.
-     *
-     * @param sourceKey the source track's key string (may be null or non-Camelot)
-     * @param targetKey the target track's key string (may be null or non-Camelot)
-     * @return {@code true} if compatible, {@code false} if not compatible,
-     *         {@code null} if either key is missing (unknown)
-     */
-    private Boolean calculateKeyCompatibility(String sourceKey, String targetKey) {
-        // If either key is unknown, we cannot make a determination.
-        // Return null to indicate "unknown compatibility" rather than false.
-        if (sourceKey == null || targetKey == null) {
-            return null;
-        }
-
-        // Normalize both keys to uppercase and trim whitespace for consistent comparison.
-        // This handles inputs like "4a", " 4A ", "4 A" (though the last would fail parsing).
-        String normalizedSource = normalizeKey(sourceKey);
-        String normalizedTarget = normalizeKey(targetKey);
-
-        // Rule 1: Exact match. This is the simplest case.
-        if (normalizedSource.equals(normalizedTarget)) {
-            return true;
-        }
-
-        // Rule 2: Try to parse Camelot notation.
-        // If either key is not in Camelot format (e.g., "F# minor"), we fall back
-        // to exact match only (already checked above).
-        CamelotKey sourceCamelot = parseCamelotKey(normalizedSource);
-        CamelotKey targetCamelot = parseCamelotKey(normalizedTarget);
-
-        if (sourceCamelot == null || targetCamelot == null) {
-            // Non-Camelot keys: we can't apply the wheel rules, so they're only
-            // compatible if they match exactly (already checked above).
-            return false;
-        }
-
-        // Both keys are in Camelot notation. Apply the wheel rules.
-        // Keys must have the same letter (A or B) to be compatible.
-        if (sourceCamelot.letter.equals(targetCamelot.letter)) {
-            int numDiff = Math.abs(sourceCamelot.number - targetCamelot.number);
-
-            // Sub-rule 2a: Adjacent numbers (diff = 1).
-            // Examples: 4A ↔ 5A, 12B ↔ 1B (wrapping not handled here, but 12 and 1
-            // would have diff = 11, not 1).
-            if (numDiff == 1) {
-                return true;
-            }
-
-            // Sub-rule 2b: Relative minor/major via ±7.
-            // Examples: 4A ↔ 11A (diff = 7), 3B ↔ 10B (diff = 7).
-            // On the Camelot wheel, these are diagonal opposites.
-            if (numDiff == 7) {
-                return true;
-            }
-        }
-
-        // If none of the compatibility rules matched, the keys are not compatible.
-        return false;
-    }
-
-    /**
-     * Calculates the absolute BPM difference between two tracks.
-     * <p>
-     * This metric helps DJs understand the technical difficulty of a transition.
-     * A small difference (0-5 BPM) is easy to blend. A large difference
-     * (15+ BPM) typically requires a cut, echo out, or tempo adjustment.
-     *
-     * @param sourceBpm the source track's BPM (may be null if unknown)
-     * @param targetBpm the target track's BPM (may be null if unknown)
-     * @return the absolute BPM difference as a positive value, or {@code null}
-     *         if either BPM is missing
-     */
-    private Double calculateBpmDifference(Double sourceBpm, Double targetBpm) {
-        // Cannot calculate difference if either BPM is unknown.
-        if (sourceBpm == null || targetBpm == null) {
-            return null;
-        }
-
-        // Return the absolute difference. We use absolute value because the
-        // direction (faster → slower vs. slower → faster) is already implied
-        // by the source/target relationship.
-        return Math.abs(sourceBpm - targetBpm);
-    }
-
-    /**
-     * Normalizes a key string for consistent comparison.
-     * <p>
-     * Trims leading/trailing whitespace and converts to uppercase.
-     * This ensures that "4a", " 4A ", and "4A" are treated identically.
-     *
-     * @param key the raw key string from the track metadata
-     * @return the normalized key string
-     */
-    private String normalizeKey(String key) {
-        return key.trim().toUpperCase();
-    }
-
-    /**
-     * Attempts to parse a key string in Camelot notation.
-     * <p>
-     * Camelot notation consists of a number (1-12) followed by a letter:
-     * <ul>
-     *   <li><b>A</b> = minor key (e.g., 4A = F minor)</li>
-     *   <li><b>B</b> = major key (e.g., 4B = A♭ major)</li>
-     * </ul>
-     * <p>
-     * Examples of valid Camelot keys: "4A", "11B", "12A", "1B".
-     * Examples of invalid/non-Camelot keys: "F minor", "A♭ major", "4", "A".
-     *
-     * @param key the normalized key string to parse
-     * @return a {@link CamelotKey} record if parsing succeeds, {@code null} otherwise
-     */
-    private CamelotKey parseCamelotKey(String key) {
-        // A Camelot key must be at least 2 characters: one digit and one letter.
-        if (key == null || key.length() < 2) {
-            return null;
-        }
-
-        // The last character must be the letter (A or B).
-        char letter = key.charAt(key.length() - 1);
-        if (letter != 'A' && letter != 'B') {
-            // Not a Camelot letter. Could be a traditional key like "F#MINOR"
-            // or simply malformed input.
-            return null;
-        }
-
-        // Everything before the last character should be the number (1-12).
-        String numberStr = key.substring(0, key.length() - 1);
-        try {
-            int number = Integer.parseInt(numberStr);
-
-            // Validate the number is within the Camelot wheel range.
-            if (number < 1 || number > 12) {
-                return null;
-            }
-
-            return new CamelotKey(number, String.valueOf(letter));
-        } catch (NumberFormatException e) {
-            // The prefix is not a valid integer. Not Camelot notation.
-            return null;
-        }
-    }
-
-    /**
-     * Immutable data holder for a parsed Camelot key.
-     * <p>
-     * Using a private record keeps the parsing logic encapsulated while
-     * providing type-safe access to the number and letter components.
-     *
-     * @param number the Camelot wheel position (1-12)
-     * @param letter the key quality ("A" for minor, "B" for major)
-     */
-    private record CamelotKey(int number, String letter) {
     }
 
     /**
