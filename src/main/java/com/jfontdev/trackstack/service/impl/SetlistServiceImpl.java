@@ -1,18 +1,24 @@
 package com.jfontdev.trackstack.service.impl;
 
+import com.jfontdev.trackstack.dto.setlist.SetlistEnergyArcDTO;
+import com.jfontdev.trackstack.dto.setlist.SetlistExportDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistRequestDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistResponseDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistSlotRequestDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistSlotResponseDTO;
+import com.jfontdev.trackstack.dto.setlist.SetlistTransitionValidationDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistUpdateRequestDTO;
 import com.jfontdev.trackstack.exception.NotFoundException;
 import com.jfontdev.trackstack.model.Setlist;
 import com.jfontdev.trackstack.model.SetlistSlot;
 import com.jfontdev.trackstack.model.Track;
+import com.jfontdev.trackstack.model.Transition;
 import com.jfontdev.trackstack.repository.SetlistRepository;
 import com.jfontdev.trackstack.repository.SetlistSlotRepository;
 import com.jfontdev.trackstack.repository.TrackRepository;
+import com.jfontdev.trackstack.repository.TransitionRepository;
 import com.jfontdev.trackstack.service.SetlistService;
+import com.jfontdev.trackstack.service.TransitionCompatibilityEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,13 +47,19 @@ public class SetlistServiceImpl implements SetlistService {
     private final SetlistRepository setlistRepository;
     private final SetlistSlotRepository setlistSlotRepository;
     private final TrackRepository trackRepository;
+    private final TransitionRepository transitionRepository;
+    private final TransitionCompatibilityEngine compatibilityEngine;
 
     public SetlistServiceImpl(SetlistRepository setlistRepository,
                               SetlistSlotRepository setlistSlotRepository,
-                              TrackRepository trackRepository) {
+                              TrackRepository trackRepository,
+                              TransitionRepository transitionRepository,
+                              TransitionCompatibilityEngine compatibilityEngine) {
         this.setlistRepository = setlistRepository;
         this.setlistSlotRepository = setlistSlotRepository;
         this.trackRepository = trackRepository;
+        this.transitionRepository = transitionRepository;
+        this.compatibilityEngine = compatibilityEngine;
     }
 
     /**
@@ -349,6 +361,50 @@ public class SetlistServiceImpl implements SetlistService {
         return mapToResponseDTO(saved);
     }
 
+    /**
+     * Retrieves the energy arc visualization for a setlist.
+     * <p>
+     * Fetches all slots in order, resolves each track's metadata, and computes
+     * aggregate statistics (average, peak, low, trend) from the energy values.
+     *
+     * @param id the setlist's unique identifier
+     * @return the energy arc data with points and statistics
+     * @throws NotFoundException if the setlist does not exist
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public SetlistEnergyArcDTO getEnergyArc(Long id) {
+        log.debug("Fetching energy arc for setlist {}", id);
+        Setlist setlist = findSetlistOrThrow(id);
+
+        List<SetlistSlot> slots = setlistSlotRepository
+                .findBySetlistIdOrderBySlotOrderAsc(id);
+
+        List<SetlistEnergyArcDTO.EnergyPoint> points = new java.util.ArrayList<>();
+        for (SetlistSlot slot : slots) {
+            Optional<Track> trackOpt = trackRepository.findById(slot.getTrackId());
+            Track track = trackOpt.orElse(null);
+
+            points.add(new SetlistEnergyArcDTO.EnergyPoint(
+                    slot.getSlotOrder(),
+                    slot.getTrackId(),
+                    track != null ? track.getTitle() : null,
+                    track != null ? track.getArtist() : null,
+                    slot.getEnergy(),
+                    track != null ? track.getBpm() : null,
+                    track != null ? track.getKey() : null,
+                    track != null ? track.getDurationSeconds() : null));
+        }
+
+        SetlistEnergyArcDTO.EnergyStats stats = calculateEnergyStats(points);
+
+        return new SetlistEnergyArcDTO(
+                setlist.getId(),
+                setlist.getName(),
+                points,
+                stats);
+    }
+
     // --- Helper methods ---
 
     /**
@@ -495,6 +551,296 @@ public class SetlistServiceImpl implements SetlistService {
                 setlist.getTotalDurationSeconds(),
                 setlist.getPreparationTimeMinutes(),
                 slotDTOs);
+    }
+
+    /**
+     * Validates all track-to-track transitions within a setlist.
+     * <p>
+     * For each adjacent pair of tracks, calculates key compatibility (Camelot wheel),
+     * BPM difference, and checks whether a logged transition exists in the database.
+     * Generates a human-readable warning for any problematic pairs.
+     *
+     * @param id the setlist's unique identifier
+     * @return the validation report with per-pair details and summary
+     * @throws NotFoundException if the setlist does not exist
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public SetlistTransitionValidationDTO validateTransitions(Long id) {
+        log.debug("Validating transitions for setlist {}", id);
+        Setlist setlist = findSetlistOrThrow(id);
+
+        List<SetlistSlot> slots = setlistSlotRepository
+                .findBySetlistIdOrderBySlotOrderAsc(id);
+
+        List<SetlistTransitionValidationDTO.TransitionPairValidation> pairs =
+                new java.util.ArrayList<>();
+
+        int compatibleKeyCount = 0;
+        int incompatibleKeyCount = 0;
+        int unknownKeyCount = 0;
+        int knownTransitionCount = 0;
+        int missingTransitionCount = 0;
+        int warningCount = 0;
+
+        for (int i = 0; i < slots.size() - 1; i++) {
+            SetlistSlot fromSlot = slots.get(i);
+            SetlistSlot toSlot = slots.get(i + 1);
+
+            Track fromTrack = trackRepository.findById(fromSlot.getTrackId()).orElse(null);
+            Track toTrack = trackRepository.findById(toSlot.getTrackId()).orElse(null);
+
+            Boolean keyCompat = null;
+            Double bpmDiff = null;
+            if (fromTrack != null && toTrack != null) {
+                keyCompat = compatibilityEngine.calculateKeyCompatibility(
+                        fromTrack.getKey(), toTrack.getKey());
+                bpmDiff = compatibilityEngine.calculateBpmDifference(
+                        fromTrack.getBpm(), toTrack.getBpm());
+            }
+
+            Optional<Transition> transitionOpt = transitionRepository
+                    .findBySourceTrackIdAndTargetTrackId(fromSlot.getTrackId(), toSlot.getTrackId());
+            boolean knownTransition = transitionOpt.isPresent();
+            Integer transitionRating = transitionOpt.map(Transition::getRating).orElse(null);
+
+            String warning = buildTransitionWarning(fromTrack, toTrack, keyCompat, bpmDiff, knownTransition);
+            if (warning != null) {
+                warningCount++;
+            }
+
+            if (Boolean.TRUE.equals(keyCompat)) {
+                compatibleKeyCount++;
+            } else if (Boolean.FALSE.equals(keyCompat)) {
+                incompatibleKeyCount++;
+            } else {
+                unknownKeyCount++;
+            }
+
+            if (knownTransition) {
+                knownTransitionCount++;
+            } else {
+                missingTransitionCount++;
+            }
+
+            pairs.add(new SetlistTransitionValidationDTO.TransitionPairValidation(
+                    fromSlot.getSlotOrder(),
+                    fromSlot.getTrackId(),
+                    fromTrack != null ? fromTrack.getTitle() : null,
+                    fromTrack != null ? fromTrack.getKey() : null,
+                    fromTrack != null ? fromTrack.getBpm() : null,
+                    toSlot.getSlotOrder(),
+                    toSlot.getTrackId(),
+                    toTrack != null ? toTrack.getTitle() : null,
+                    toTrack != null ? toTrack.getKey() : null,
+                    toTrack != null ? toTrack.getBpm() : null,
+                    keyCompat,
+                    bpmDiff,
+                    knownTransition,
+                    transitionRating,
+                    warning));
+        }
+
+        SetlistTransitionValidationDTO.Summary summary = new SetlistTransitionValidationDTO.Summary(
+                pairs.size(),
+                compatibleKeyCount,
+                incompatibleKeyCount,
+                unknownKeyCount,
+                knownTransitionCount,
+                missingTransitionCount,
+                warningCount);
+
+        return new SetlistTransitionValidationDTO(
+                setlist.getId(),
+                setlist.getName(),
+                pairs,
+                summary);
+    }
+
+    /**
+     * Exports a setlist in the requested format.
+     * <p>
+     * Builds a structured DTO from the setlist's slots and track metadata.
+     * The format parameter is validated but does not affect the DTO structure
+     * (text format is handled at the controller layer).
+     *
+     * @param id     the setlist's unique identifier
+     * @param format the export format: "json" or "text"
+     * @return the exported setlist data
+     * @throws NotFoundException        if the setlist does not exist
+     * @throws IllegalArgumentException if format is not supported
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public SetlistExportDTO exportSetlist(Long id, String format) {
+        log.debug("Exporting setlist {} in format {}", id, format);
+        Setlist setlist = findSetlistOrThrow(id);
+
+        if (format == null || (!"json".equals(format) && !"text".equals(format))) {
+            throw new IllegalArgumentException(
+                    "Unsupported format: " + format + ". Must be 'json' or 'text'.");
+        }
+
+        List<SetlistSlot> slots = setlistSlotRepository
+                .findBySetlistIdOrderBySlotOrderAsc(id);
+
+        List<SetlistExportDTO.ExportSlot> exportSlots = new java.util.ArrayList<>();
+        for (SetlistSlot slot : slots) {
+            Optional<Track> trackOpt = trackRepository.findById(slot.getTrackId());
+            Track track = trackOpt.orElse(null);
+
+            exportSlots.add(new SetlistExportDTO.ExportSlot(
+                    slot.getSlotOrder(),
+                    slot.getTrackId(),
+                    track != null ? track.getTitle() : null,
+                    track != null ? track.getArtist() : null,
+                    track != null ? track.getKey() : null,
+                    track != null ? track.getBpm() : null,
+                    slot.getEnergy(),
+                    slot.getNotes(),
+                    track != null ? track.getDurationSeconds() : null));
+        }
+
+        return new SetlistExportDTO(
+                setlist.getId(),
+                setlist.getName(),
+                setlist.getStatus(),
+                setlist.getTotalDurationSeconds(),
+                exportSlots);
+    }
+
+    /**
+     * Builds a human-readable warning for a transition pair.
+     * <p>
+     * Returns null if no issues are detected.
+     *
+     * @param fromTrack the source track
+     * @param toTrack the target track
+     * @param keyCompat key compatibility result
+     * @param bpmDiff BPM difference
+     * @param knownTransition whether a transition is logged
+     * @return a warning string, or null if no issues
+     */
+    private String buildTransitionWarning(Track fromTrack, Track toTrack,
+                                           Boolean keyCompat, Double bpmDiff,
+                                           boolean knownTransition) {
+        StringBuilder warning = new StringBuilder();
+
+        if (Boolean.FALSE.equals(keyCompat)) {
+            String fromKey = fromTrack != null ? fromTrack.getKey() : "?";
+            String toKey = toTrack != null ? toTrack.getKey() : "?";
+            warning.append("Keys not compatible: ").append(fromKey).append(" -> ").append(toKey);
+        }
+
+        if (bpmDiff != null && bpmDiff > 15.0) {
+            if (warning.length() > 0) {
+                warning.append("; ");
+            }
+            warning.append("Large BPM jump: ").append(String.format("%.1f", bpmDiff));
+        }
+
+        if (!knownTransition) {
+            if (warning.length() > 0) {
+                warning.append("; ");
+            }
+            warning.append("No logged transition");
+        }
+
+        return warning.length() > 0 ? warning.toString() : null;
+    }
+
+    /**
+     * Calculates aggregate energy statistics from a list of energy points.
+     * <p>
+     * Computes average, peak, low, and a qualitative trend label.
+     * Only non-null energy values are considered for the average.
+     *
+     * @param points the ordered energy points
+     * @return the calculated statistics
+     */
+    private SetlistEnergyArcDTO.EnergyStats calculateEnergyStats(
+            List<SetlistEnergyArcDTO.EnergyPoint> points) {
+        int sum = 0;
+        int count = 0;
+        Integer peak = null;
+        Integer low = null;
+
+        for (SetlistEnergyArcDTO.EnergyPoint point : points) {
+            Integer energy = point.energy();
+            if (energy == null) {
+                continue;
+            }
+
+            sum += energy;
+            count++;
+
+            if (peak == null || energy > peak) {
+                peak = energy;
+            }
+            if (low == null || energy < low) {
+                low = energy;
+            }
+        }
+
+        Double average = count > 0 ? (double) sum / count : null;
+        String trend = determineEnergyTrend(points);
+
+        return new SetlistEnergyArcDTO.EnergyStats(average, peak, low, trend);
+    }
+
+    /**
+     * Determines a qualitative trend label for the energy progression.
+     * <p>
+     * Compares the average energy of the first half vs. the second half:
+     * <ul>
+     *   <li>{@code "BUILD"} — second half is higher than first half</li>
+     *   <li>{@code "COOLDOWN"} — second half is lower than first half</li>
+     *   <li>{@code "PEAK"} — both halves are high (average >= 4)</li>
+     *   <li>{@code "FLAT"} — neither build nor cooldown, and not peak</li>
+     * </ul>
+     *
+     * @param points the ordered energy points
+     * @return the trend label
+     */
+    private String determineEnergyTrend(List<SetlistEnergyArcDTO.EnergyPoint> points) {
+        if (points.size() < 2) {
+            return "FLAT";
+        }
+
+        int mid = points.size() / 2;
+        double firstHalfAvg = averageEnergy(points.subList(0, mid));
+        double secondHalfAvg = averageEnergy(points.subList(mid, points.size()));
+
+        if (firstHalfAvg >= 4.0 && secondHalfAvg >= 4.0) {
+            return "PEAK";
+        }
+        if (secondHalfAvg > firstHalfAvg + 0.5) {
+            return "BUILD";
+        }
+        if (firstHalfAvg > secondHalfAvg + 0.5) {
+            return "COOLDOWN";
+        }
+        return "FLAT";
+    }
+
+    /**
+     * Calculates the average energy of a sublist of points.
+     * <p>
+     * Only non-null energy values are considered.
+     *
+     * @param points the sublist of points
+     * @return the average energy, or 0.0 if no energy values are present
+     */
+    private double averageEnergy(List<SetlistEnergyArcDTO.EnergyPoint> points) {
+        int sum = 0;
+        int count = 0;
+        for (SetlistEnergyArcDTO.EnergyPoint point : points) {
+            if (point.energy() != null) {
+                sum += point.energy();
+                count++;
+            }
+        }
+        return count > 0 ? (double) sum / count : 0.0;
     }
 
     /**

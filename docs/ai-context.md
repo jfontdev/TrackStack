@@ -50,4 +50,19 @@ This file exists to guide AI code generation tools (Copilot, etc.).
 - Clear and minimal abstraction.
 - No premature optimization.
 
+## Incremental Development Rule
+
+> All feature implementations must be split into **small, reviewable increments**.
+> Each increment is designed to be reviewed independently, approved, and then merged.
+> This prevents large, hard-to-review PRs and ensures every architectural decision is intentional.
+
+**How it works:**
+1. A feature is broken into logical sub-phases (e.g., foundation → DTOs → service → controller → tests)
+2. Each sub-phase is implemented, tested, and reviewed before the next one starts
+3. The project plan is updated after each increment to reflect current status
+4. No single increment should exceed ~200 lines of changed code
+5. The AI must propose the increment plan and get user approval before coding
+
+**This rule applies to ALL AI code generation.**
+
 If generating code, follow architecture.md and conventions.md.

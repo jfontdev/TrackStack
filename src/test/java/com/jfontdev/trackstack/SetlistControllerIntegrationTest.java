@@ -447,4 +447,259 @@ public class SetlistControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(400);
     }
+
+    @Test
+    void getEnergyArcReturnsOrderedPointsWithStats() {
+        // GIVEN a setlist with three tracks at different energy levels
+        Long track1 = createTrack("Low Energy Track");
+        Long track2 = createTrack("Mid Energy Track");
+        Long track3 = createTrack("High Energy Track");
+
+        Map<String, Object> payload = Map.of(
+                "name", "Energy Arc Test",
+                "description", "Testing energy progression",
+                "slots", List.of(
+                        Map.of("trackId", track1, "slotOrder", 1, "energy", 2),
+                        Map.of("trackId", track2, "slotOrder", 2, "energy", 3),
+                        Map.of("trackId", track3, "slotOrder", 3, "energy", 5)));
+
+        Number setlistId = given()
+                .contentType(ContentType.JSON)
+                .body(payload)
+                .when()
+                .post("/api/setlists")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        // WHEN requesting the energy arc
+        given()
+                .when()
+                .get("/api/setlists/{id}/energy-arc", setlistId.longValue())
+                .then()
+                .statusCode(200)
+                .body("setlistId", equalTo(setlistId.intValue()))
+                .body("setlistName", equalTo("Energy Arc Test"))
+                .body("points", hasSize(3))
+                .body("points[0].slotOrder", equalTo(1))
+                .body("points[0].trackId", equalTo(track1.intValue()))
+                .body("points[0].energy", equalTo(2))
+                .body("points[1].slotOrder", equalTo(2))
+                .body("points[1].trackId", equalTo(track2.intValue()))
+                .body("points[1].energy", equalTo(3))
+                .body("points[2].slotOrder", equalTo(3))
+                .body("points[2].trackId", equalTo(track3.intValue()))
+                .body("points[2].energy", equalTo(5))
+                .body("stats.averageEnergy", equalTo(3.33f))
+                .body("stats.peakEnergy", equalTo(5))
+                .body("stats.lowEnergy", equalTo(2))
+                .body("stats.energyTrend", equalTo("BUILD"));
+    }
+
+    @Test
+    void getEnergyArcForInvalidSetlistReturns404() {
+        given()
+                .when()
+                .get("/api/setlists/{id}/energy-arc", 9999)
+                .then()
+                .statusCode(404)
+                .body("error", containsString("Setlist not found"));
+    }
+
+    @Test
+    void validateTransitionsReportsKeyAndBpmIssues() {
+        // GIVEN two tracks with incompatible keys and a large BPM difference
+        Long track1 = createTrack("Key 4A Track");
+        Long track2 = createTrack("Key 8B Track");
+
+        // Create a setlist with these two tracks
+        Map<String, Object> payload = Map.of(
+                "name", "Validation Test",
+                "description", "Testing transition validation",
+                "slots", List.of(
+                        Map.of("trackId", track1, "slotOrder", 1, "energy", 2),
+                        Map.of("trackId", track2, "slotOrder", 2, "energy", 4)));
+
+        Number setlistId = given()
+                .contentType(ContentType.JSON)
+                .body(payload)
+                .when()
+                .post("/api/setlists")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        // WHEN validating transitions
+        given()
+                .when()
+                .get("/api/setlists/{id}/validate-transitions", setlistId.longValue())
+                .then()
+                .statusCode(200)
+                .body("setlistId", equalTo(setlistId.intValue()))
+                .body("setlistName", equalTo("Validation Test"))
+                .body("pairs", hasSize(1))
+                .body("pairs[0].fromSlotOrder", equalTo(1))
+                .body("pairs[0].toSlotOrder", equalTo(2))
+                .body("pairs[0].knownTransition", equalTo(false))
+                .body("pairs[0].warning", containsString("No logged transition"))
+                .body("summary.totalPairs", equalTo(1))
+                .body("summary.missingTransitionPairs", equalTo(1))
+                .body("summary.warningsCount", equalTo(1));
+    }
+
+    @Test
+    void validateTransitionsWithKnownTransitionReportsCompatibility() {
+        // GIVEN two tracks with compatible keys
+        Long track1 = createTrack("Key 4A Track");
+        Long track2 = createTrack("Key 5A Track");
+
+        // Create a setlist
+        Map<String, Object> payload = Map.of(
+                "name", "Known Transition Test",
+                "description", "Testing with logged transition",
+                "slots", List.of(
+                        Map.of("trackId", track1, "slotOrder", 1, "energy", 2),
+                        Map.of("trackId", track2, "slotOrder", 2, "energy", 4)));
+
+        Number setlistId = given()
+                .contentType(ContentType.JSON)
+                .body(payload)
+                .when()
+                .post("/api/setlists")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        // Log a transition between them
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "sourceTrackId", track1,
+                        "targetTrackId", track2,
+                        "rating", 5,
+                        "notes", "Great mix",
+                        "style", "EQ blend"))
+                .when()
+                .post("/api/transitions")
+                .then()
+                .statusCode(201);
+
+        // WHEN validating transitions
+        given()
+                .when()
+                .get("/api/setlists/{id}/validate-transitions", setlistId.longValue())
+                .then()
+                .statusCode(200)
+                .body("pairs[0].knownTransition", equalTo(true))
+                .body("pairs[0].transitionRating", equalTo(5))
+                .body("pairs[0].keyCompatible", equalTo(true))
+                .body("summary.knownTransitionPairs", equalTo(1))
+                .body("summary.compatibleKeyPairs", equalTo(1))
+                .body("summary.warningsCount", equalTo(0));
+    }
+
+    @Test
+    void validateTransitionsForInvalidSetlistReturns404() {
+        given()
+                .when()
+                .get("/api/setlists/{id}/validate-transitions", 9999)
+                .then()
+                .statusCode(404)
+                .body("error", containsString("Setlist not found"));
+    }
+
+    @Test
+    void exportSetlistJsonReturnsFullMetadata() {
+        // GIVEN a setlist with a track
+        Long track = createTrack("Export Track");
+        Map<String, Object> payload = Map.of(
+                "name", "Export Test",
+                "description", "Testing export",
+                "slots", List.of(
+                        Map.of("trackId", track, "slotOrder", 1, "energy", 3, "notes", "Mid set")));
+
+        Number setlistId = given()
+                .contentType(ContentType.JSON)
+                .body(payload)
+                .when()
+                .post("/api/setlists")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        // WHEN exporting as JSON
+        given()
+                .when()
+                .post("/api/setlists/{id}/export?format=json", setlistId.longValue())
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("setlistId", equalTo(setlistId.intValue()))
+                .body("setlistName", equalTo("Export Test"))
+                .body("status", equalTo("DRAFT"))
+                .body("slots", hasSize(1))
+                .body("slots[0].slotOrder", equalTo(1))
+                .body("slots[0].trackId", equalTo(track.intValue()))
+                .body("slots[0].trackTitle", equalTo("Export Track"))
+                .body("slots[0].energy", equalTo(3));
+    }
+
+    @Test
+    void exportSetlistTextReturnsPlainText() {
+        // GIVEN a setlist with a track
+        Long track = createTrack("Text Export Track");
+        Map<String, Object> payload = Map.of(
+                "name", "Text Export Test",
+                "description", "Testing text export",
+                "slots", List.of(
+                        Map.of("trackId", track, "slotOrder", 1, "energy", 4)));
+
+        Number setlistId = given()
+                .contentType(ContentType.JSON)
+                .body(payload)
+                .when()
+                .post("/api/setlists")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("id");
+
+        // WHEN exporting as text
+        given()
+                .when()
+                .post("/api/setlists/{id}/export?format=text", setlistId.longValue())
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .body(containsString("TrackStack Setlist Export"))
+                .body(containsString("Text Export Test"))
+                .body(containsString("[4/5]"))
+                .body(containsString("Text Export Track"));
+    }
+
+    @Test
+    void exportSetlistWithInvalidFormatReturns400() {
+        Long setlistId = createSetlist("Bad Export", "Testing invalid format");
+
+        given()
+                .when()
+                .post("/api/setlists/{id}/export?format=xml", setlistId)
+                .then()
+                .statusCode(400)
+                .body("error", containsString("Unsupported format"));
+    }
+
+    @Test
+    void exportSetlistForInvalidSetlistReturns404() {
+        given()
+                .when()
+                .post("/api/setlists/{id}/export?format=json", 9999)
+                .then()
+                .statusCode(404)
+                .body("error", containsString("Setlist not found"));
+    }
 }

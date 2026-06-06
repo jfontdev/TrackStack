@@ -32,6 +32,8 @@ This is not a tutorial project. It is structured intentionally to simulate real 
 - **NEW:** AI as enhancement, not core dependency
 - **NEW:** Graceful degradation (AI down → rule-based fallback)
 
+> **See `docs/ai-context.md` for the Incremental Development Rule** — all AI-generated code must follow it.
+
 ---
 
 # 📦 Project Phases
@@ -169,9 +171,9 @@ Status: ✅ Completed (metadata, architecture docs)
 - `POST /api/setlists/{id}/ready`
 - `POST /api/setlists/{id}/performed`
 
-**MOVED to Phase 03.5 / 04:**
+**Phase 03.5 endpoints (now COMPLETE):**
 - `GET /api/setlists/{id}/energy-arc` — energy progression visualization
-- Track-to-track transition validation within setlist
+- `GET /api/setlists/{id}/validate-transitions` — track-to-track transition validation
 - `POST /api/setlists/{id}/export` — text/JSON export for XDJ-AZ
 
 ### Part B: RedisJSON Cache Refactor (COMPLETE)
@@ -188,11 +190,62 @@ Status: ✅ Completed (metadata, architecture docs)
 
 **Tech:** RedisJSON module, `redis/redis-stack` Docker image, Jackson `JsonNode`
 
-**AI Enhancement (Phase 03.5):**
+**AI Enhancement (future Phase 03.5+):**
 - `POST /api/ai/setlists/analyze` - AI critiques energy arc and flow
 - `POST /api/ai/setlists/generate` - AI generates setlist from natural language
 
-**Duration:** 2-3 weeks
+**Duration:** 2-3 weeks (Phase 03 + 03.5 combined)
+
+---
+
+## ✅ Phase 03.5 – Set Planning Intelligence (Incrementally)
+
+**Goal:** Implement the three features that were moved from Phase 03, but do it incrementally with reviewable chunks.
+
+**Status:** COMPLETE. All 5 increments done.
+
+### Increment 1: Foundation — Extract Shared Compatibility Engine ✅ COMPLETE
+- Extract `calculateKeyCompatibility` and `calculateBpmDifference` from `TransitionServiceImpl` into a new `TransitionCompatibilityEngine` component
+- Update `TransitionServiceImpl` to delegate to the new engine
+- Add unit tests for `TransitionCompatibilityEngine` in isolation
+- **Why first:** This is shared infrastructure needed by both feature 2 and existing AI/rule-based fallback
+- **Review focus:** Clean extraction, no behavior change, tests still pass
+- **Status:** ✅ Done. 14 unit tests passing. Main code compiles.
+
+### Increment 2: Feature A — Energy Arc Visualization ✅ COMPLETE
+- DTO: `SetlistEnergyArcDTO` with `points` and `stats`
+- Service: `getEnergyArc(Long setlistId)` in `SetlistService`
+- Controller: `GET /api/setlists/{id}/energy-arc`
+- Integration test: verify ordered points, stats (avg, peak, trend)
+- **Review focus:** DTO design, stat calculation accuracy, REST semantics
+- **Status:** ✅ Done. DTO, service, controller, and tests implemented. 50 main source files compile.
+
+### Increment 3: Feature B — Track-to-Track Transition Validation ✅ COMPLETE
+- DTO: `SetlistTransitionValidationDTO` with per-pair key/BPM/transition status
+- Service: `validateTransitions(Long setlistId)` in `SetlistService`
+- Reuses `TransitionCompatibilityEngine` from Increment 1
+- Queries `TransitionRepository` to check if logged transitions exist
+- Controller: `GET /api/setlists/{id}/validate-transitions`
+- Integration test: verify key compatibility warnings, BPM jump warnings, missing transition warnings
+- **Review focus:** Reuse of shared engine, clean DTO composition, warning accuracy
+- **Status:** ✅ Done. 51 main source files compile.
+
+### Increment 4: Feature C — Setlist Export for XDJ-AZ ✅ COMPLETE
+- DTO: `SetlistExportDTO` for JSON variant
+- Service: `exportSetlist(Long setlistId, String format)` in `SetlistService`
+- Controller: `POST /api/setlists/{id}/export?format={json|text}`
+- Text format: plain text playlist with numbered tracks, BPM/key, energy
+- JSON format: structured metadata for downstream tools
+- Integration test: verify both JSON and text outputs
+- **Review focus:** Export format design, content-type handling, text format readability
+- **Status:** ✅ Done. 52 main source files compile.
+
+### Increment 5: Documentation & Project Plan Update ✅ COMPLETE
+- Update this `project-plan.md` to mark Phase 03.5 as complete
+- Update `Current Phase` section to reflect Phase 03.5 is done
+- Move the three features from "MOVED to Phase 03.5 / 04" to "COMPLETED" under Phase 03.5
+- **Review focus:** Documentation accuracy, no drift from implementation
+- **Status:** ✅ Done. All docs updated.
 
 ---
 
@@ -327,7 +380,14 @@ The project will be considered "enterprise-ready" when:
 - Part B: RedisJSON Cache Refactor — redis/redis-stack, clean JSON serializer, JSONPath queries (5 tests)
 - Total: 41 tests, all passing
 
-**Next immediate action:** Implement session recording, planned vs actual tracking, performance stats.
+**Phase 03.5 COMPLETED:**
+- ✅ Increment 1: Extract `TransitionCompatibilityEngine` (shared foundation)
+- ✅ Increment 2: `GET /api/setlists/{id}/energy-arc` — energy arc visualization
+- ✅ Increment 3: `GET /api/setlists/{id}/validate-transitions` — transition validation
+- ✅ Increment 4: `POST /api/setlists/{id}/export` — setlist export
+- ✅ Increment 5: Documentation & plan update
+
+**Next immediate action:** Implement Phase 04 — session recording, planned vs actual tracking, performance stats.
 
 ---
 

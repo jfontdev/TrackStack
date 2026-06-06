@@ -1,0 +1,627 @@
+{
+  "info": {
+    "_postman_id": "b34ec584-2177-4aef-b4a0-74cb411c571e",
+    "name": "TrackStack",
+    "description": "TrackStack DJ Set Planning API — verified against actual codebase.\n\n**Implemented:** Tracks, Transitions, Setlists (CRUD + slots + energy-arc + validation + export), Health, AI transition suggestion.\n**Removed:** Tags (dropped in Phase 00).\n\n**Phase 03.5 endpoints:**\n- GET /api/setlists/{id}/energy-arc — energy progression visualization\n- GET /api/setlists/{id}/validate-transitions — track-to-track transition validation\n- POST /api/setlists/{id}/export?format=json|text — setlist export",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "13261274"
+  },
+  "item": [
+    {
+      "name": "Tracks",
+      "item": [
+        {
+          "name": "Scan tracks",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracks/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracks", "scan"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get all tracks (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracks?page=0&size=20&sort=title,asc&bpmMin=130&bpmMax=140&key=4A&genre=Techno",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracks"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "title,asc" },
+                { "key": "bpmMin", "value": "130" },
+                { "key": "bpmMax", "value": "140" },
+                { "key": "key", "value": "4A" },
+                { "key": "genre", "value": "Techno" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get track by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracks/{{trackId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracks", "{{trackId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create track",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Second Song\",\n  \"artist\": \"Jordi F\",\n  \"album\": \"Test Album\",\n  \"bpm\": 150,\n  \"key\": \"4A\",\n  \"durationSeconds\": 292,\n  \"genre\": \"Techno\",\n  \"filePath\": \"/music/test/track.mp3\",\n  \"fileFormat\": \"mp3\",\n  \"bitrate\": 320,\n  \"energy\": 4\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tracks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracks"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Track",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"artist\": \"Artist B\",\n  \"album\": \"Updated Album\",\n  \"bpm\": 140.0,\n  \"key\": \"D minor\",\n  \"durationSeconds\": 270,\n  \"genre\": \"Techno\",\n  \"filePath\": \"/music/test/track.mp3\",\n  \"fileFormat\": \"mp3\",\n  \"bitrate\": 320,\n  \"energy\": 3\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tracks/{{trackId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracks", "{{trackId}}"]
+            },
+            "description": "Fully replaces a track (PUT semantics). All fields must be provided."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Update Track",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Patched Title\",\n  \"energy\": 5\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tracks/{{trackId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracks", "{{trackId}}"]
+            },
+            "description": "Partially updates a track (PATCH semantics). Only send fields to change."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete track",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracks/{{trackId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracks", "{{trackId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transitions",
+      "item": [
+        {
+          "name": "Create transition",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceTrackId\": {{trackId}},\n  \"targetTrackId\": {{trackId2}},\n  \"rating\": 5,\n  \"notes\": \"Smooth harmonic mix, same energy level\",\n  \"style\": \"EQ blend\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get transition by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/{{transitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "{{transitionId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get transitions from track",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/from/{{trackId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "from", "{{trackId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get transitions to track",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/to/{{trackId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "to", "{{trackId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get best transitions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/best?trackId={{trackId}}&minRating=4&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "best"],
+              "query": [
+                { "key": "trackId", "value": "{{trackId}}" },
+                { "key": "minRating", "value": "4" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Transition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"notes\": \"Updated notes\",\n  \"style\": \"Cut\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/{{transitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "{{transitionId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Update Transition",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 3\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/{{transitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "{{transitionId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete transition",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/{{transitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "{{transitionId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Record transition play",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transitions/{{transitionId}}/record-play",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transitions", "{{transitionId}}", "record-play"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Setlists",
+      "item": [
+        {
+          "name": "Create setlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekend Techno Set\",\n  \"description\": \"Peak time warehouse vibes\",\n  \"slots\": [\n    {\n      \"trackId\": {{trackId}},\n      \"slotOrder\": 1,\n      \"energy\": 2,\n      \"notes\": \"Opener - keep it low\"\n    },\n    {\n      \"trackId\": {{trackId2}},\n      \"slotOrder\": 2,\n      \"energy\": 4,\n      \"notes\": \"Build energy\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get all setlists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get setlists by status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists?status=DRAFT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists"],
+              "query": [
+                { "key": "status", "value": "DRAFT" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get setlist by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update setlist",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Set Name\",\n  \"description\": \"Updated description\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete setlist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add slot to setlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackId\": {{trackId}},\n  \"slotOrder\": 3,\n  \"energy\": 5,\n  \"notes\": \"Peak time banger\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/slots",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "slots"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update slot",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackId\": {{trackId2}},\n  \"slotOrder\": 2,\n  \"energy\": 3,\n  \"notes\": \"Updated slot notes\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/slots/{{slotId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "slots", "{{slotId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove slot",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/slots/{{slotId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "slots", "{{slotId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder slots",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotIds\": [{{slotId2}}, {{slotId}}, {{slotId3}}]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/slots/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "slots", "reorder"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark setlist ready",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "ready"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark setlist performed",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/performed",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "performed"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get energy arc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/energy-arc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "energy-arc"]
+            },
+            "description": "Returns energy progression visualization data for a setlist."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate transitions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/validate-transitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "validate-transitions"]
+            },
+            "description": "Analyzes track-to-track transitions for key/BPM compatibility and warns about missing logged transitions."
+          },
+          "response": []
+        },
+        {
+          "name": "Export setlist",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/setlists/{{setlistId}}/export?format=json",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "setlists", "{{setlistId}}", "export"],
+              "query": [
+                { "key": "format", "value": "json", "description": "json or text" }
+              ]
+            },
+            "description": "Exports setlist as JSON or plain text for XDJ-AZ reference."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "AI transition suggestion",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackId\": {{trackId}},\n  \"vibe\": \"maintain energy but add melody\",\n  \"excludeRecentlyPlayed\": true,\n  \"limit\": 3\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/transitions/suggest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "transitions", "suggest"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "health"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "trackId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "trackId2",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "setlistId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "slotId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "slotId2",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "slotId3",
+      "value": "3",
+      "type": "string"
+    },
+    {
+      "key": "transitionId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}
