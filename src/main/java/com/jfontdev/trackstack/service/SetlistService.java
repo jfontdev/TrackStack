@@ -1,8 +1,11 @@
 package com.jfontdev.trackstack.service;
 
+import com.jfontdev.trackstack.dto.setlist.SetlistEnergyArcDTO;
+import com.jfontdev.trackstack.dto.setlist.SetlistExportDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistRequestDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistResponseDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistSlotRequestDTO;
+import com.jfontdev.trackstack.dto.setlist.SetlistTransitionValidationDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistUpdateRequestDTO;
 
 import java.util.List;
@@ -146,4 +149,51 @@ public interface SetlistService {
      * @throws com.jfontdev.trackstack.exception.NotFoundException if not found
      */
     SetlistResponseDTO markPerformed(Long id);
+
+    /**
+     * Retrieves the energy arc visualization for a setlist.
+     * <p>
+     * Returns an ordered sequence of energy points (one per slot) plus
+     * aggregate statistics describing the overall energy progression.
+     * Each point includes the slot's energy level and the track's metadata
+     * (title, artist, BPM, key, duration).
+     *
+     * @param id the setlist's unique identifier
+     * @return the energy arc data with points and statistics
+     * @throws com.jfontdev.trackstack.exception.NotFoundException if not found
+     */
+    SetlistEnergyArcDTO getEnergyArc(Long id);
+
+    /**
+     * Validates all track-to-track transitions within a setlist.
+     * <p>
+     * Analyzes every adjacent pair of tracks and reports on:
+     * <ul>
+     *   <li>Key compatibility (via Camelot wheel rules)</li>
+     *   <li>BPM difference</li>
+     *   <li>Whether a logged transition exists in the database</li>
+     * </ul>
+     *
+     * @param id the setlist's unique identifier
+     * @return the validation report with per-pair details and summary
+     * @throws com.jfontdev.trackstack.exception.NotFoundException if not found
+     */
+    SetlistTransitionValidationDTO validateTransitions(Long id);
+
+    /**
+     * Exports a setlist in the requested format.
+     * <p>
+     * Supports two formats:
+     * <ul>
+     *   <li>{@code "json"} (default) — returns structured metadata as {@link SetlistExportDTO}</li>
+     *   <li>{@code "text"} — returns a plain text playlist for quick reference</li>
+     * </ul>
+     *
+     * @param id     the setlist's unique identifier
+     * @param format the export format: "json" or "text"
+     * @return the exported setlist data
+     * @throws com.jfontdev.trackstack.exception.NotFoundException if not found
+     * @throws IllegalArgumentException if format is not supported
+     */
+    SetlistExportDTO exportSetlist(Long id, String format);
 }

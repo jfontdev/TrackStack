@@ -1,13 +1,17 @@
 package com.jfontdev.trackstack.controller;
 
+import com.jfontdev.trackstack.dto.setlist.SetlistEnergyArcDTO;
+import com.jfontdev.trackstack.dto.setlist.SetlistExportDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistReorderRequestDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistRequestDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistResponseDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistSlotRequestDTO;
+import com.jfontdev.trackstack.dto.setlist.SetlistTransitionValidationDTO;
 import com.jfontdev.trackstack.dto.setlist.SetlistUpdateRequestDTO;
 import com.jfontdev.trackstack.service.SetlistService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -190,5 +194,129 @@ public class SetlistController {
     @PostMapping("/{id}/performed")
     public SetlistResponseDTO markPerformed(@PathVariable Long id) {
         return setlistService.markPerformed(id);
+    }
+
+    /**
+     * Retrieves the energy arc visualization for a setlist.
+     * <p>
+     * Returns an ordered sequence of energy points (one per slot) plus
+     * aggregate statistics describing the overall energy progression.
+     *
+     * @param id the setlist's unique identifier
+     * @return 200 OK with the energy arc data
+     */
+    @GetMapping("/{id}/energy-arc")
+    public SetlistEnergyArcDTO getEnergyArc(@PathVariable Long id) {
+        return setlistService.getEnergyArc(id);
+    }
+
+    /**
+     * Validates all track-to-track transitions within a setlist.
+     * <p>
+     * Analyzes every adjacent pair of tracks for key compatibility,
+     * BPM difference, and whether a logged transition exists.
+     *
+     * @param id the setlist's unique identifier
+     * @return 200 OK with the validation report
+     */
+    @GetMapping("/{id}/validate-transitions")
+    public SetlistTransitionValidationDTO validateTransitions(@PathVariable Long id) {
+        return setlistService.validateTransitions(id);
+    }
+
+    /**
+     * Exports a setlist in the requested format.
+     * <p>
+     * Supports JSON (structured metadata) or plain text (human-readable playlist).
+     *
+     * @param id     the setlist's unique identifier
+     * @param format the export format: "json" (default) or "text"
+     * @return 200 OK with the exported data
+     */
+    @PostMapping("/{id}/export")
+    public ResponseEntity<?> exportSetlist(@PathVariable Long id,
+                                           @RequestParam(defaultValue = "json") String format) {
+        SetlistExportDTO export = setlistService.exportSetlist(id, format);
+
+        if ("text".equals(format)) {
+            String text = formatAsText(export);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(text);
+        }
+
+        return ResponseEntity.ok(export);
+    }
+
+    /**
+     * Formats a {@link SetlistExportDTO} as a plain text playlist.
+     * <p>
+     * Produces a numbered track list with key, BPM, energy, and notes,
+     * suitable for printing or placing on a USB stick alongside rekordbox exports.
+     *
+     * @param export the export DTO to format
+     * @return the plain text representation
+     */
+    private String formatAsText(SetlistExportDTO export) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("TrackStack Setlist Export\n");
+        sb.append("=========================\n\n");
+        sb.append("Setlist: ").append(export.setlistName()).append("\n");
+        sb.append("Status:  ").append(export.status()).append("\n");
+
+        if (export.totalDurationSeconds() != null) {
+            int minutes = export.totalDurationSeconds() / 60;
+            int seconds = export.totalDurationSeconds() % 60;
+            sb.append("Duration: ").append(minutes).append(":")
+                    .append(String.format("%02d", seconds)).append("\n");
+        }
+
+        sb.append("Tracks:  ").append(export.slots().size()).append("\n");
+        sb.append("\n--------------------------\n\n");
+
+        for (int i = 0; i < export.slots().size(); i++) {
+            SetlistExportDTO.ExportSlot slot = export.slots().get(i);
+            sb.append(i + 1).append(".");
+
+            if (slot.energy() != null) {
+                sb.append(" [").append(slot.energy()).append("/5]");
+            }
+
+            sb.append(" \"").append(slot.trackTitle() != null ? slot.trackTitle() : "Unknown")
+                    .append("\"");
+            if (slot.trackArtist() != null) {
+                sb.append(" by ").append(slot.trackArtist());
+            }
+            sb.append("\n");
+
+            if (slot.trackKey() != null || slot.trackBpm() != null) {
+                sb.append("   ");
+                if (slot.trackKey() != null) {
+                    sb.append("Key: ").append(slot.trackKey()).append(" ");
+                }
+                if (slot.trackBpm() != null) {
+                    sb.append("BPM: ").append(slot.trackBpm()).append(" ");
+                }
+                sb.append("\n");
+            }
+
+            if (slot.durationSeconds() != null) {
+                int min = slot.durationSeconds() / 60;
+                int sec = slot.durationSeconds() % 60;
+                sb.append("   Duration: ").append(min).append(":")
+                        .append(String.format("%02d", sec)).append("\n");
+            }
+
+            if (slot.notes() != null && !slot.notes().isBlank()) {
+                sb.append("   Notes: ").append(slot.notes()).append("\n");
+            }
+
+            sb.append("\n");
+        }
+
+        sb.append("--------------------------\n");
+        sb.append("Exported from TrackStack\n");
+
+        return sb.toString();
     }
 }
